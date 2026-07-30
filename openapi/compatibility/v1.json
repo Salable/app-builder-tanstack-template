@@ -1,0 +1,63 @@
+{
+  "apiVersion": 1,
+  "operations": [
+    {
+      "method": "get",
+      "parameters": [
+        {
+          "in": "header",
+          "name": "API-Version",
+          "required": false
+        }
+      ],
+      "path": "/api/v1/health",
+      "responses": {
+        "200": ["application/json"],
+        "400": ["application/problem+json"]
+      }
+    },
+    {
+      "method": "post",
+      "parameters": [
+        {
+          "in": "header",
+          "name": "API-Version",
+          "required": false
+        }
+      ],
+      "path": "/api/v1/projects",
+      "requestBody": {
+        "content": ["application/json"],
+        "required": true
+      },
+      "responses": {
+        "201": ["application/json"],
+        "400": ["application/problem+json"],
+        "409": ["application/problem+json"],
+        "500": ["application/problem+json"]
+      }
+    }
+  ],
+  "schemas": {
+    "CreateProjectRequest": {
+      "properties": {},
+      "required": ["name"]
+    },
+    "HealthResponse": {
+      "properties": {
+        "service": ["generated-app"],
+        "status": ["ok"],
+        "version": [1]
+      },
+      "required": ["service", "status", "version"]
+    },
+    "ProblemDetail": {
+      "properties": {},
+      "required": ["correlationId", "detail", "instance", "status", "title", "type"]
+    },
+    "ProjectResponse": {
+      "properties": {},
+      "required": ["createdAt", "id", "name", "revision"]
+    }
+  }
+}
