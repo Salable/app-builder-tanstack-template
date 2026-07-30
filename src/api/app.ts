@@ -1,5 +1,6 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import type { Context } from "hono";
+import openApiDocument from "../../openapi/openapi.json" with { type: "json" };
 import {
   ApiVersionHeaderSchema,
   ApiVersionRequestHeadersSchema,
@@ -332,7 +333,9 @@ const openApiConfig = {
   servers: [{ url: "/" }],
 };
 
-publicApi.doc("/api/v1/openapi.json", openApiConfig);
+publicApi.get("/api/v1/openapi.json", (context) =>
+  context.json(openApiDocument),
+);
 
 export function getOpenApiDocument() {
   return publicApi.getOpenAPI31Document(openApiConfig);

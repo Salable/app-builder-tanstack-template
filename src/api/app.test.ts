@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import openApiDocument from "../../openapi/openapi.json" with { type: "json" };
 import { ProblemDetailSchema, ProtectedFeatureResponseSchema } from "./contracts";
 import { getOpenApiDocument, publicApi } from "./app";
 import { setProjectAccessRepositoryForTesting } from "../authorization/project-access";
@@ -54,6 +55,13 @@ describe("generated application public API", () => {
     expect(
       document.paths?.["/api/v1/projects/{projectId}/protected-feature"]?.get,
     ).toBeDefined();
+  });
+
+  it("serves the checked-in OpenAPI contract without runtime regeneration", async () => {
+    const response = await publicApi.request("/api/v1/openapi.json");
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(openApiDocument);
   });
 
   it("uses the same sanitized problem boundary for unknown API routes", async () => {
