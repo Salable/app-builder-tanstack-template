@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "provider": "vercel",
+  "adapter": {
+    "name": "nitro",
+    "version": "3.0.260610-beta",
+    "preset": "vercel",
+    "buildOutputApiVersion": 3
+  },
+  "build": {
+    "installCommand": "npm ci",
+    "buildCommand": "npm run build:vercel",
+    "outputDirectory": ".vercel/output"
+  },
+  "environment": [
+    {
+      "name": "DATABASE_URL",
+      "required": true,
+      "secret": true,
+      "source": "vercel-marketplace:neon",
+      "phase": "runtime"
+    },
+    {
+      "name": "BETTER_AUTH_URL",
+      "required": true,
+      "secret": false,
+      "source": "deployment-url",
+      "phase": "runtime"
+    },
+    {
+      "name": "BETTER_AUTH_SECRET",
+      "required": true,
+      "secret": true,
+      "source": "generated",
+      "phase": "runtime"
+    },
+    {
+      "name": "GITHUB_APP_CLIENT_ID",
+      "required": false,
+      "secret": false,
+      "source": "user",
+      "phase": "runtime"
+    },
+    {
+      "name": "GITHUB_APP_CLIENT_SECRET",
+      "required": false,
+      "secret": true,
+      "source": "user",
+      "phase": "runtime"
+    }
+  ],
+  "database": {
+    "provider": "neon",
+    "integration": "neon",
+    "migrationCommand": "npm run migrate"
+  },
+  "routes": {
+    "application": "/",
+    "publicApi": "/api/v1",
+    "health": "/api/v1/health",
+    "openapi": "/api/v1/openapi.json",
+    "identityCallback": "/api/auth/callback/github"
+  },
+  "runtime": {
+    "node": "24.x",
+    "regions": []
+  },
+  "securityHeaders": [
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "X-Frame-Options",
+    "Referrer-Policy",
+    "Permissions-Policy"
+  ],
+  "verification": {
+    "requireExactCommit": true,
+    "checks": [
+      "migration",
+      "application",
+      "health",
+      "api-version",
+      "openapi",
+      "security-headers"
+    ]
+  }
+}

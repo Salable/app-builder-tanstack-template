@@ -64,3 +64,23 @@ The integration suite enables Better Auth email/password endpoints only when
 both `NODE_ENV=test` and `APP_BUILDER_TEST_AUTH=email-password` are set in its
 isolated server process. Production configuration cannot activate that
 fixture.
+
+## Vercel deployment
+
+`deployment/vercel.v1.json` is the versioned deployment contract. It records
+the pinned Nitro adapter, required environment-variable names, Neon
+integration, migration command, public routes, and post-deploy checks without
+embedding any values.
+
+Vercel builds the Build Output API v3 package with:
+
+```sh
+npm run build:vercel
+npm run check:deployment:built
+```
+
+For the initial deployment, connect the Vercel Marketplace Neon integration
+to the project so it supplies `DATABASE_URL`. Configure the generated
+deployment URL as `BETTER_AUTH_URL` and supply a generated
+`BETTER_AUTH_SECRET`. GitHub OAuth values are optional until sign-in is
+enabled.

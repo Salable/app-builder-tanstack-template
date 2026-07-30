@@ -9,7 +9,10 @@
   "scripts": {
     "audit:production": "npm audit --omit=dev --audit-level=high",
     "build": "npm run generate && vite build",
-    "check": "npm run typecheck && npm run build && npm run generate:check && npm test",
+    "build:vercel": "NITRO_PRESET=vercel npm run build",
+    "check": "npm run typecheck && npm run build && npm run check:deployment && npm run generate:check && npm test",
+    "check:deployment": "node --import tsx scripts/check-deployment-manifest.ts",
+    "check:deployment:built": "node --import tsx scripts/check-deployment-manifest.ts --built",
     "dev": "vite dev",
     "generate": "npm run generate:openapi && npm run generate:sdk",
     "generate:check": "npm run generate && npm run check:compatibility && git diff --exit-code -- openapi src/api/generated",
