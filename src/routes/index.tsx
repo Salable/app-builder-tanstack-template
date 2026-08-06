@@ -6,11 +6,14 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { create } from "zustand";
 import { useGetApiV1Health } from "../api/generated/client";
-import type { HealthResponse } from "../api/generated/models";
 
-const projectFormSchema = z
+export const projectFormSchema = z
   .object({
-    name: z.string().trim().min(3, "Use at least three characters."),
+    name: z
+      .string()
+      .trim()
+      .min(3, "Use at least three characters.")
+      .max(100, "Use no more than 100 characters."),
   })
   .strict();
 
@@ -21,39 +24,54 @@ type ThemeStore = {
   theme: Theme;
 };
 
+export function healthStatusText(health: {
+  data?: { status: string; version: number };
+  isError: boolean;
+  isPending: boolean;
+}): string {
+  if (health.isPending) return "Public API: checking…";
+  if (health.isError || health.data === undefined) return "Public API: unavailable";
+  return `Public API: ${health.data.status}; version ${health.data.version}`;
+}
+
 const useTheme = create<ThemeStore>((set) => ({
   setTheme: (theme) => set({ theme }),
   theme: "system",
 }));
 
-const initialHealth = {
-  service: "generated-app",
-  status: "ok",
-  version: 1,
-} satisfies HealthResponse;
+export function ThemeSelector({
+  setTheme,
+  theme,
+}: Pick<ThemeStore, "setTheme" | "theme">) {
+  return (
+    <div aria-label="Theme" className="theme-selector flex rounded-xl p-1" role="group">
+      {(["light", "dark", "system"] as const).map((option) => (
+        <Button
+          aria-pressed={theme === option}
+          className="theme-selector-button rounded-lg px-3 py-2 text-sm capitalize"
+          key={option}
+          onClick={() => setTheme(option)}
+          type="button"
+        >
+          {option}
+        </Button>
+      ))}
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/")({
   component: Home,
-  loader: () => ({ initialHealth }),
 });
 
 function Home() {
-  const { initialHealth } = Route.useLoaderData();
   const theme = useTheme((state) => state.theme);
   const setTheme = useTheme((state) => state.setTheme);
   const health = useGetApiV1Health({
-    fetch: {
+    request: {
       headers: { "API-Version": "1" },
     },
-    query: {
-      initialData: initialHealth,
-    },
   });
-  const form = useForm<ProjectForm>({
-    defaultValues: { name: "" },
-    resolver: zodResolver(projectFormSchema),
-  });
-
   useEffect(() => {
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const resolved = theme === "system" ? (prefersDark ? "dark" : "light") : theme;
@@ -86,22 +104,10 @@ function Home() {
                 Runtime proof
               </h2>
               <p className="mt-1 text-sm text-slate-600" role="status">
-                Public API: {health.data.status}; version {health.data.version}
+                {healthStatusText(health)}
               </p>
             </div>
-            <div aria-label="Theme" className="flex rounded-xl bg-slate-100 p-1">
-              {(["light", "dark", "system"] as const).map((option) => (
-                <Button
-                  aria-pressed={theme === option}
-                  className="rounded-lg px-3 py-2 text-sm capitalize data-[pressed]:bg-white"
-                  key={option}
-                  onClick={() => setTheme(option)}
-                  type="button"
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
+            <ThemeSelector setTheme={setTheme} theme={theme} />
           </div>
         </section>
 
@@ -112,37 +118,7 @@ function Home() {
           <h2 id="form-heading" className="text-lg font-semibold">
             Typed form boundary
           </h2>
-          <form
-            className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start"
-            onSubmit={form.handleSubmit(({ name }) => {
-              form.setValue("name", name.trim());
-            })}
-          >
-            <div className="flex-1">
-              <label className="text-sm font-medium" htmlFor="project-name">
-                Project name
-              </label>
-              <input
-                aria-describedby="project-name-error"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-violet-600 focus:ring-2 focus:ring-violet-200"
-                id="project-name"
-                {...form.register("name")}
-              />
-              <p
-                className="mt-2 min-h-5 text-sm text-rose-700"
-                id="project-name-error"
-                role="alert"
-              >
-                {form.formState.errors.name?.message}
-              </p>
-            </div>
-            <Button
-              className="mt-7 rounded-xl bg-violet-700 px-5 py-3 font-semibold text-white hover:bg-violet-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700"
-              type="submit"
-            >
-              Validate
-            </Button>
-          </form>
+          <ProjectNameForm />
         </section>
 
         <Link className="w-fit font-semibold text-violet-700 underline" to="/protected">
@@ -150,5 +126,48 @@ function Home() {
         </Link>
       </div>
     </main>
+  );
+}
+
+export function ProjectNameForm() {
+  const form = useForm<ProjectForm>({
+    defaultValues: { name: "" },
+    resolver: zodResolver(projectFormSchema),
+  });
+
+  return (
+    <form
+      className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start"
+      onSubmit={form.handleSubmit(({ name }) => {
+        form.setValue("name", name.trim());
+      })}
+    >
+      <div className="flex-1">
+        <label className="text-sm font-medium" htmlFor="project-name">
+          Project name
+        </label>
+        <input
+          aria-describedby="project-name-error"
+          aria-invalid={form.formState.errors.name ? true : undefined}
+          className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-violet-600 focus:ring-2 focus:ring-violet-200"
+          id="project-name"
+          maxLength={100}
+          {...form.register("name")}
+        />
+        <p
+          className="mt-2 min-h-5 text-sm text-rose-700"
+          id="project-name-error"
+          role="alert"
+        >
+          {form.formState.errors.name?.message}
+        </p>
+      </div>
+      <Button
+        className="mt-7 rounded-xl bg-violet-700 px-5 py-3 font-semibold text-white hover:bg-violet-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700"
+        type="submit"
+      >
+        Validate
+      </Button>
+    </form>
   );
 }

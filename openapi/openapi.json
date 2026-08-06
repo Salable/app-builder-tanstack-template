@@ -206,6 +206,15 @@
               "example": "1",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-Organization-ID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -239,6 +248,26 @@
             },
             "description": "The request or API version is invalid."
           },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "A database-backed session is required."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "The user is not a member of the requested organization."
+          },
           "409": {
             "content": {
               "application/problem+json": {
@@ -258,6 +287,16 @@
               }
             },
             "description": "The transaction failed without exposing internal details."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "The identity boundary is not configured."
           }
         },
         "tags": [

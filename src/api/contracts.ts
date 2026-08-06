@@ -12,6 +12,12 @@ export const ApiVersionRequestHeadersSchema = z.object({
   "API-Version": ApiVersionHeaderSchema.optional(),
 });
 
+export const OrganizationRequestHeadersSchema = ApiVersionRequestHeadersSchema.extend({
+  "X-Organization-ID": z.uuid().openapi({
+    param: { in: "header", name: "X-Organization-ID" },
+  }),
+});
+
 export const HealthResponseSchema = z
   .object({
     service: z.literal("generated-app"),
@@ -25,7 +31,7 @@ export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 
 export const CreateProjectRequestSchema = z
   .object({
-    name: z.string().trim().min(3).max(100),
+    name: z.string().min(3).max(100),
   })
   .strict()
   .openapi("CreateProjectRequest");

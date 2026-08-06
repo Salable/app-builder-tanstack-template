@@ -6,8 +6,13 @@ const EnvironmentVariableSchema = z
     name: z.string().regex(/^[A-Z][A-Z0-9_]*$/),
     required: z.boolean(),
     secret: z.boolean(),
-    source: z.enum(["deployment-url", "generated", "user", "vercel-marketplace:neon"]),
-    phase: z.literal("runtime"),
+    source: z.enum([
+      "generated",
+      "user",
+      "vercel-marketplace:neon",
+      "vercel-system-url",
+    ]),
+    phase: z.enum(["runtime", "build-runtime"]),
   })
   .strict();
 
@@ -26,18 +31,34 @@ const DeploymentManifestSchema = z
     build: z
       .object({
         installCommand: z.literal("npm ci"),
-        buildCommand: z.literal("npm run build:vercel"),
+        buildCommand: z.literal("npm run deploy:vercel"),
         outputDirectory: z.literal(".vercel/output"),
       })
       .strict(),
-    environment: z.array(EnvironmentVariableSchema).min(3),
-    database: z
+    installation: z
       .object({
-        provider: z.literal("neon"),
-        integration: z.literal("neon"),
-        migrationCommand: z.literal("npm run migrate"),
+        method: z.literal("vercel-deploy-button"),
+        repositoryOwnership: z.literal("vercel-created"),
+        requiredIntegrations: z.tuple([
+          z
+            .object({
+              type: z.literal("connectable"),
+              slug: z.literal("app-builder"),
+            })
+            .strict(),
+          z
+            .object({
+              type: z.literal("native-product"),
+              slug: z.literal("neon"),
+              productSlug: z.literal("neon"),
+              protocol: z.literal("storage"),
+            })
+            .strict(),
+        ]),
+        databaseCredentialOwner: z.literal("vercel-marketplace:neon"),
       })
       .strict(),
+    environment: z.array(EnvironmentVariableSchema).min(3),
     routes: z
       .object({
         application: z.literal("/"),
@@ -60,15 +81,31 @@ const DeploymentManifestSchema = z
         checks: z.array(z.string()).min(1),
       })
       .strict(),
+    previewMigration: z
+      .object({
+        command: z.literal("npm run migrate"),
+        stageVariable: z.literal("APP_BUILDER_DELIVERY_STAGE"),
+        runWhen: z.literal("PREVIEW"),
+        productionExecutor: z.literal("trusted-release"),
+      })
+      .strict(),
   })
   .strict();
 
 const manifest = DeploymentManifestSchema.parse(
   JSON.parse(await readFile("deployment/vercel.v1.json", "utf8")),
 );
+
+if (
+  manifest.installation.requiredIntegrations[1].slug !== "neon" ||
+  manifest.installation.databaseCredentialOwner !== "vercel-marketplace:neon"
+) {
+  throw new Error("Vercel installation must provision the native Neon product.");
+}
 const packageJson = z
   .object({
     dependencies: z.record(z.string(), z.string()),
+    scripts: z.record(z.string(), z.string()),
   })
   .parse(JSON.parse(await readFile("package.json", "utf8")));
 
@@ -76,23 +113,174 @@ if (packageJson.dependencies.nitro !== manifest.adapter.version) {
   throw new Error("Deployment manifest must pin the installed Nitro version.");
 }
 
+if (
+  packageJson.scripts["deploy:vercel"] !== "node --import tsx scripts/deploy-vercel.ts"
+) {
+  throw new Error("The Vercel deployment command must use the stage-aware runner.");
+}
+
+const releaseMigration = z
+  .object({
+    schemaVersion: z.literal(1),
+    executor: z.literal("trusted-release"),
+    database: z
+      .object({
+        provider: z.literal("neon"),
+        credential: z.literal("DATABASE_URL"),
+        migrationCommand: z.literal("npm run migrate"),
+      })
+      .strict(),
+    cutover: z
+      .object({
+        requiresMigrationReceipt: z.literal(true),
+        receipt: z
+          .object({
+            exactCommit: z.literal(true),
+            migrationChecksums: z.literal(true),
+            completedAt: z.literal(true),
+          })
+          .strict(),
+        receiptCommand: z.literal(
+          "npm run release:emit-migration-receipt -- --commit <git-commit> --output <receipt-path>",
+        ),
+        verificationCommand: z.literal(
+          "npm run release:verify-cutover -- --commit <git-commit> --receipt <receipt-path>",
+        ),
+        productionPromotion: z
+          .object({
+            invokedBy: z.literal("trusted-production-promotion-controller"),
+            commands: z.tuple([
+              z.literal("npm run migrate"),
+              z.literal(
+                "npm run release:emit-migration-receipt -- --commit <git-commit> --output <receipt-path>",
+              ),
+              z.literal(
+                "npm run release:verify-cutover -- --commit <git-commit> --receipt <receipt-path>",
+              ),
+              z.literal("npm run deploy:vercel"),
+            ]),
+          })
+          .strict(),
+      })
+      .strict(),
+  })
+  .strict()
+  .parse(JSON.parse(await readFile("deployment/release-migration.v1.json", "utf8")));
+
+if (
+  packageJson.scripts["release:emit-migration-receipt"] !==
+  "node --import tsx scripts/emit-migration-receipt.ts"
+) {
+  throw new Error("Trusted production promotion must expose receipt emission.");
+}
+if (
+  packageJson.scripts["release:verify-cutover"] !==
+  "node --import tsx scripts/verify-release-cutover.ts"
+) {
+  throw new Error("Trusted production promotion must expose the cutover verifier.");
+}
+if (
+  packageJson.scripts["deploy:vercel"].includes("release:verify-cutover") ||
+  manifest.environment.some(({ name }) => name === "RELEASE_MIGRATION_RECEIPT")
+) {
+  throw new Error(
+    "Cutover receipt verification belongs to trusted release automation, not the Vercel build.",
+  );
+}
+
+const vercelConfig = z
+  .object({ buildCommand: z.literal(manifest.build.buildCommand) })
+  .passthrough()
+  .parse(JSON.parse(await readFile("vercel.json", "utf8")));
+if (vercelConfig.buildCommand !== manifest.build.buildCommand) {
+  throw new Error("vercel.json must execute the bounded deployment command.");
+}
+
 const variableNames = manifest.environment.map(({ name }) => name);
 if (new Set(variableNames).size !== variableNames.length) {
   throw new Error("Deployment manifest environment names must be unique.");
 }
 
-for (const requiredName of ["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET"]) {
+const databaseVariable = manifest.environment.find(
+  ({ name }) => name === releaseMigration.database.credential,
+);
+if (
+  databaseVariable?.required !== true ||
+  databaseVariable.secret !== true ||
+  databaseVariable.source !== "vercel-marketplace:neon" ||
+  databaseVariable.phase !== "build-runtime"
+) {
+  throw new Error(
+    "Deployment manifest must declare DATABASE_URL as a required build/runtime Neon secret.",
+  );
+}
+
+for (const requiredName of [
+  "BETTER_AUTH_URL",
+  "BETTER_AUTH_SECRET",
+  "APP_ENVIRONMENT_ID",
+  "APP_BUILDER_CONTROL_PLANE_URL",
+  "APP_BUILDER_PROJECT_ID",
+  "APP_BUILDER_FEATURE_FLAG_RUNTIME_TOKEN",
+  "APP_BUILDER_DELIVERY_STAGE",
+]) {
   const variable = manifest.environment.find(({ name }) => name === requiredName);
   if (!variable?.required) {
     throw new Error(`Deployment manifest must require ${requiredName}.`);
   }
 }
 
+const flagCredential = manifest.environment.find(
+  ({ name }) => name === "APP_BUILDER_FEATURE_FLAG_RUNTIME_TOKEN",
+);
+if (flagCredential?.secret !== true || flagCredential.source !== "generated") {
+  throw new Error("Feature flag evaluation must use a generated runtime-only secret.");
+}
+const flagEnvironment = manifest.environment.find(
+  ({ name }) => name === "APP_ENVIRONMENT_ID",
+);
+if (flagEnvironment?.secret !== false || flagEnvironment.source !== "generated") {
+  throw new Error("Feature flags require a generated non-secret environment identity.");
+}
+for (const name of ["APP_BUILDER_CONTROL_PLANE_URL", "APP_BUILDER_PROJECT_ID"]) {
+  const variable = manifest.environment.find((candidate) => candidate.name === name);
+  if (variable?.secret !== false || variable.source !== "generated") {
+    throw new Error(`${name} must be a generated non-secret runtime identity.`);
+  }
+}
+const deliveryStage = manifest.environment.find(
+  ({ name }) => name === manifest.previewMigration.stageVariable,
+);
+if (
+  deliveryStage?.secret !== false ||
+  deliveryStage.source !== "generated" ||
+  deliveryStage.phase !== "build-runtime"
+) {
+  throw new Error(
+    "Preview migration requires a generated non-secret build/runtime stage.",
+  );
+}
+
+const entitlementVariable = manifest.environment.find(
+  ({ name }) => name === "APP_BUILDER_ENTITLED_ORGANIZATION_IDS",
+);
+if (
+  entitlementVariable?.required !== false ||
+  entitlementVariable.secret !== false ||
+  entitlementVariable.source !== "user"
+) {
+  throw new Error(
+    "Deployment manifest must declare optional APP_BUILDER_ENTITLED_ORGANIZATION_IDS user configuration.",
+  );
+}
+
 if (process.argv.includes("--built")) {
+  const builtIndex = process.argv.indexOf("--built");
+  const configPath = process.argv[builtIndex + 1] ?? ".vercel/output/config.json";
   const buildOutput = z
     .object({ version: z.literal(manifest.adapter.buildOutputApiVersion) })
     .passthrough()
-    .parse(JSON.parse(await readFile(".vercel/output/config.json", "utf8")));
+    .parse(JSON.parse(await readFile(configPath, "utf8")));
   if (buildOutput.version !== 3) {
     throw new Error("Vercel Build Output API version must be 3.");
   }

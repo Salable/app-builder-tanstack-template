@@ -1,13 +1,4 @@
-DROP INDEX projects_owner_user_id_idx;
-DROP INDEX projects_organization_id_idx;
-
-ALTER TABLE projects
-  DROP COLUMN owner_user_id,
-  DROP COLUMN organization_id;
-
-DROP TABLE organization_memberships;
-DROP TABLE organizations;
-DROP TABLE "verification";
-DROP TABLE "account";
-DROP TABLE "session";
-DROP TABLE "user";
+-- Identity data is part of the authorization boundary and cannot be represented by
+-- schema 0002. Keep the schema and rows intact when rehearsing rollback; reapplying
+-- 0003 is deliberately idempotent and restores only the migration ledger entry.
+SELECT 1;

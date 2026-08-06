@@ -1,6 +1,7 @@
 import type { Database } from "../persistence/database";
 import {
   ProjectNameConflictError,
+  ProjectOrganizationAccessError,
   type Project,
   type ProjectRepository,
 } from "./project-repository";
@@ -22,19 +23,25 @@ export class PostgresProjectRepository implements ProjectRepository {
     private readonly faultAfterInsertName?: string,
   ) {}
 
-  async create(input: { name: string }): Promise<Project> {
+  async create(
+    input: { name: string },
+    organizationId: string,
+    userId: string,
+  ): Promise<Project> {
     const normalizedName = input.name.toLocaleLowerCase("en");
 
     try {
       return await this.database.transaction(async (session) => {
         const result = await session.query<ProjectRow>(
-          `INSERT INTO projects (id, name, normalized_name)
-           VALUES ($1, $2, $3)
+          `INSERT INTO projects (id, name, normalized_name, organization_id, owner_user_id)
+           SELECT $1, $2, $3, membership.organization_id, membership.user_id
+           FROM organization_memberships AS membership
+           WHERE membership.organization_id = $4 AND membership.user_id = $5
            RETURNING id, name, revision, created_at`,
-          [crypto.randomUUID(), input.name, normalizedName],
+          [crypto.randomUUID(), input.name, normalizedName, organizationId, userId],
         );
         const row = result.rows[0];
-        if (row === undefined) throw new Error("Project insert returned no row.");
+        if (row === undefined) throw new ProjectOrganizationAccessError();
 
         if (normalizedName === this.faultAfterInsertName) {
           throw new Error("Injected post-insert persistence failure.");

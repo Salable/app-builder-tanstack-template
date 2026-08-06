@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [viteReact()],
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    exclude: ["scripts/**/*.integration.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "scripts/**/*.test.ts"],
   },
 });

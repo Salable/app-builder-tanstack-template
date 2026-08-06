@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { IdentityConfigurationError } from "./identity-provider";
-import { readBetterAuthConfig } from "./better-auth-runtime";
+import { readBetterAuthConfig } from "./better-auth-config";
 
 const baseEnvironment = {
   BETTER_AUTH_SECRET: "identity-test-secret-with-at-least-32-characters",
@@ -40,7 +40,7 @@ describe("Better Auth runtime configuration", () => {
     });
   });
 
-  it("rejects partial GitHub configuration and production test auth", () => {
+  it("rejects partial GitHub configuration and permits credential-free production", () => {
     expect(() =>
       readBetterAuthConfig({
         ...baseEnvironment,
@@ -48,12 +48,12 @@ describe("Better Auth runtime configuration", () => {
         NODE_ENV: "production",
       }),
     ).toThrow(IdentityConfigurationError);
-    expect(() =>
+    expect(
       readBetterAuthConfig({
         ...baseEnvironment,
         APP_BUILDER_TEST_AUTH: "email-password",
         NODE_ENV: "production",
       }),
-    ).toThrow("GitHub identity credentials are not configured.");
+    ).toMatchObject({ enableTestPasswordAuth: false, github: undefined });
   });
 });

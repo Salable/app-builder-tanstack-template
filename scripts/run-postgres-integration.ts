@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 
 const IMAGE =
   "postgres@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7";
@@ -8,8 +10,28 @@ let startedContainer = false;
 
 try {
   if (suppliedDatabaseUrl !== undefined) {
-    const hostname = new URL(suppliedDatabaseUrl).hostname;
-    if (!["127.0.0.1", "::1", "localhost"].includes(hostname)) {
+    if (process.env.APP_BUILDER_TEST_DISPOSABLE_DATABASE !== "1") {
+      throw new Error(
+        "APP_BUILDER_TEST_DISPOSABLE_DATABASE=1 is required for a supplied database.",
+      );
+    }
+    const parsed = new URL(suppliedDatabaseUrl);
+    if (!["postgres:", "postgresql:"].includes(parsed.protocol)) {
+      throw new Error("APP_BUILDER_TEST_DATABASE_URL must be a PostgreSQL URL.");
+    }
+    for (const key of parsed.searchParams.keys()) {
+      if (["host", "hostaddr"].includes(key.toLowerCase())) {
+        throw new Error("PostgreSQL host override parameters are not allowed.");
+      }
+    }
+    if (decodeURIComponent(parsed.hostname).includes("/")) {
+      throw new Error("PostgreSQL Unix socket hosts are not allowed.");
+    }
+    const addresses = await lookup(parsed.hostname, { all: true, verbatim: true });
+    if (
+      addresses.length === 0 ||
+      addresses.some(({ address }) => !isLoopback(address))
+    ) {
       throw new Error(
         "APP_BUILDER_TEST_DATABASE_URL must identify a disposable loopback database.",
       );
@@ -26,6 +48,11 @@ try {
   if (startedContainer) {
     await run("docker", ["stop", "--timeout", "5", containerName]);
   }
+}
+
+function isLoopback(address: string): boolean {
+  if (isIP(address) === 4) return address.startsWith("127.");
+  return address === "::1" || address.toLowerCase().startsWith("::ffff:127.");
 }
 
 async function startContainer(): Promise<string> {

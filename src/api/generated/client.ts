@@ -29,6 +29,11 @@ import type {
   ProtectedFeatureResponse,
 } from "./models";
 
+import { apiFetch } from "../fetch-mutator.ts";
+import type { ErrorType } from "../fetch-mutator.ts";
+
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 const withQueryKey = <T extends object, K>(
   query: T,
   queryKey: K,
@@ -54,15 +59,10 @@ export const getGetApiV1HealthUrl = () => {
 export const getApiV1Health = async (
   options?: RequestInit,
 ): Promise<HealthResponse> => {
-  const res = await fetch(getGetApiV1HealthUrl(), {
+  return apiFetch<HealthResponse>(getGetApiV1HealthUrl(), {
     ...options,
     method: "GET",
   });
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: HealthResponse = body ? JSON.parse(body) : {};
-  return data;
 };
 
 export const getGetApiV1HealthQueryKey = () => {
@@ -71,20 +71,20 @@ export const getGetApiV1HealthQueryKey = () => {
 
 export const getGetApiV1HealthQueryOptions = <
   TData = Awaited<ReturnType<typeof getApiV1Health>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(options?: {
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof getApiV1Health>>, TError, TData>
   >;
-  fetch?: RequestInit;
+  request?: SecondParameter<typeof apiFetch>;
 }) => {
-  const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetApiV1HealthQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getApiV1Health>>> = ({
     signal,
-  }) => getApiV1Health({ signal, ...fetchOptions });
+  }) => getApiV1Health({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getApiV1Health>>,
@@ -96,11 +96,11 @@ export const getGetApiV1HealthQueryOptions = <
 export type GetApiV1HealthQueryResult = NonNullable<
   Awaited<ReturnType<typeof getApiV1Health>>
 >;
-export type GetApiV1HealthQueryError = ProblemDetail;
+export type GetApiV1HealthQueryError = ErrorType<ProblemDetail>;
 
 export function useGetApiV1Health<
   TData = Awaited<ReturnType<typeof getApiV1Health>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(
   options: {
     query: Partial<
@@ -114,7 +114,7 @@ export function useGetApiV1Health<
         >,
         "initialData"
       >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -122,7 +122,7 @@ export function useGetApiV1Health<
 };
 export function useGetApiV1Health<
   TData = Awaited<ReturnType<typeof getApiV1Health>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(
   options?: {
     query?: Partial<
@@ -136,32 +136,32 @@ export function useGetApiV1Health<
         >,
         "initialData"
       >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetApiV1Health<
   TData = Awaited<ReturnType<typeof getApiV1Health>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getApiV1Health>>, TError, TData>
     >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
 export function useGetApiV1Health<
   TData = Awaited<ReturnType<typeof getApiV1Health>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getApiV1Health>>, TError, TData>
     >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -180,54 +180,53 @@ export const getPostApiV1ProjectsUrl = () => {
 
 export const postApiV1Projects = async (
   createProjectRequest: CreateProjectRequest,
+  organizationId: string,
   options?: RequestInit,
 ): Promise<ProjectResponse> => {
-  const res = await fetch(getPostApiV1ProjectsUrl(), {
+  const headers = new Headers(options?.headers);
+  headers.set("Content-Type", "application/json");
+  headers.set("X-Organization-ID", organizationId);
+  return apiFetch<ProjectResponse>(getPostApiV1ProjectsUrl(), {
     ...options,
     method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers,
     body: JSON.stringify(createProjectRequest),
   });
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: ProjectResponse = body ? JSON.parse(body) : {};
-  return data;
 };
 
 export const getPostApiV1ProjectsMutationOptions = <
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof postApiV1Projects>>,
     TError,
-    { data: CreateProjectRequest },
+    { data: CreateProjectRequest; organizationId: string },
     TContext
   >;
-  fetch?: RequestInit;
+  request?: SecondParameter<typeof apiFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof postApiV1Projects>>,
   TError,
-  { data: CreateProjectRequest },
+  { data: CreateProjectRequest; organizationId: string },
   TContext
 > => {
   const mutationKey = ["postApiV1Projects"];
-  const { mutation: mutationOptions, fetch: fetchOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, fetch: undefined };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof postApiV1Projects>>,
-    { data: CreateProjectRequest }
+    { data: CreateProjectRequest; organizationId: string }
   > = (props) => {
-    const { data } = props ?? {};
+    const { data, organizationId } = props;
 
-    return postApiV1Projects(data, fetchOptions);
+    return postApiV1Projects(data, organizationId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -237,23 +236,26 @@ export type PostApiV1ProjectsMutationResult = NonNullable<
   Awaited<ReturnType<typeof postApiV1Projects>>
 >;
 export type PostApiV1ProjectsMutationBody = CreateProjectRequest;
-export type PostApiV1ProjectsMutationError = ProblemDetail;
+export type PostApiV1ProjectsMutationError = ErrorType<ProblemDetail>;
 
-export const usePostApiV1Projects = <TError = ProblemDetail, TContext = unknown>(
+export const usePostApiV1Projects = <
+  TError = ErrorType<ProblemDetail>,
+  TContext = unknown,
+>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof postApiV1Projects>>,
       TError,
-      { data: CreateProjectRequest },
+      { data: CreateProjectRequest; organizationId: string },
       TContext
     >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
   Awaited<ReturnType<typeof postApiV1Projects>>,
   TError,
-  { data: CreateProjectRequest },
+  { data: CreateProjectRequest; organizationId: string },
   TContext
 > => {
   return useMutation(getPostApiV1ProjectsMutationOptions(options), queryClient);
@@ -267,15 +269,13 @@ export const getApiV1ProjectsProjectIdProtectedFeature = async (
   projectId: string,
   options?: RequestInit,
 ): Promise<ProtectedFeatureResponse> => {
-  const res = await fetch(getGetApiV1ProjectsProjectIdProtectedFeatureUrl(projectId), {
-    ...options,
-    method: "GET",
-  });
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: ProtectedFeatureResponse = body ? JSON.parse(body) : {};
-  return data;
+  return apiFetch<ProtectedFeatureResponse>(
+    getGetApiV1ProjectsProjectIdProtectedFeatureUrl(projectId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
 };
 
 export const getGetApiV1ProjectsProjectIdProtectedFeatureQueryKey = (
@@ -286,7 +286,7 @@ export const getGetApiV1ProjectsProjectIdProtectedFeatureQueryKey = (
 
 export const getGetApiV1ProjectsProjectIdProtectedFeatureQueryOptions = <
   TData = Awaited<ReturnType<typeof getApiV1ProjectsProjectIdProtectedFeature>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(
   projectId: string,
   options?: {
@@ -297,10 +297,10 @@ export const getGetApiV1ProjectsProjectIdProtectedFeatureQueryOptions = <
         TData
       >
     >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
 ) => {
-  const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -309,7 +309,7 @@ export const getGetApiV1ProjectsProjectIdProtectedFeatureQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getApiV1ProjectsProjectIdProtectedFeature>>
   > = ({ signal }) =>
-    getApiV1ProjectsProjectIdProtectedFeature(projectId, { signal, ...fetchOptions });
+    getApiV1ProjectsProjectIdProtectedFeature(projectId, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -326,11 +326,12 @@ export const getGetApiV1ProjectsProjectIdProtectedFeatureQueryOptions = <
 export type GetApiV1ProjectsProjectIdProtectedFeatureQueryResult = NonNullable<
   Awaited<ReturnType<typeof getApiV1ProjectsProjectIdProtectedFeature>>
 >;
-export type GetApiV1ProjectsProjectIdProtectedFeatureQueryError = ProblemDetail;
+export type GetApiV1ProjectsProjectIdProtectedFeatureQueryError =
+  ErrorType<ProblemDetail>;
 
 export function useGetApiV1ProjectsProjectIdProtectedFeature<
   TData = Awaited<ReturnType<typeof getApiV1ProjectsProjectIdProtectedFeature>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(
   projectId: string,
   options: {
@@ -349,7 +350,7 @@ export function useGetApiV1ProjectsProjectIdProtectedFeature<
         >,
         "initialData"
       >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -357,7 +358,7 @@ export function useGetApiV1ProjectsProjectIdProtectedFeature<
 };
 export function useGetApiV1ProjectsProjectIdProtectedFeature<
   TData = Awaited<ReturnType<typeof getApiV1ProjectsProjectIdProtectedFeature>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(
   projectId: string,
   options?: {
@@ -376,13 +377,13 @@ export function useGetApiV1ProjectsProjectIdProtectedFeature<
         >,
         "initialData"
       >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetApiV1ProjectsProjectIdProtectedFeature<
   TData = Awaited<ReturnType<typeof getApiV1ProjectsProjectIdProtectedFeature>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(
   projectId: string,
   options?: {
@@ -393,14 +394,14 @@ export function useGetApiV1ProjectsProjectIdProtectedFeature<
         TData
       >
     >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
 export function useGetApiV1ProjectsProjectIdProtectedFeature<
   TData = Awaited<ReturnType<typeof getApiV1ProjectsProjectIdProtectedFeature>>,
-  TError = ProblemDetail,
+  TError = ErrorType<ProblemDetail>,
 >(
   projectId: string,
   options?: {
@@ -411,7 +412,7 @@ export function useGetApiV1ProjectsProjectIdProtectedFeature<
         TData
       >
     >;
-    fetch?: RequestInit;
+    request?: SecondParameter<typeof apiFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

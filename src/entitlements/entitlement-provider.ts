@@ -35,10 +35,14 @@ export function setEntitlementProviderForTesting(
   entitlementProvider = replacement;
 }
 
-function createEntitlementProvider(): EntitlementProvider {
-  const environment: Record<string, string | undefined> = process.env;
-  if (environment.NODE_ENV !== "test") return new FakeEntitlementProvider();
-  const organizationIds = (environment.APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS ?? "")
+export function createEntitlementProvider(
+  environment: Record<string, string | undefined> = process.env,
+): EntitlementProvider {
+  const configuredIds =
+    environment.NODE_ENV === "test"
+      ? environment.APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS
+      : environment.APP_BUILDER_ENTITLED_ORGANIZATION_IDS;
+  const organizationIds = (configuredIds ?? "")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);

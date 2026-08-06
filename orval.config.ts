@@ -14,6 +14,10 @@ export default defineConfig({
         fetch: {
           includeHttpResponseReturnType: false,
         },
+        mutator: {
+          path: "./src/api/fetch-mutator.ts",
+          name: "apiFetch",
+        },
       },
       schemas: "./src/api/generated/models",
       target: "./src/api/generated/client.ts",

@@ -7,13 +7,18 @@
         {
           "in": "header",
           "name": "API-Version",
-          "required": false
+          "required": false,
+          "schema": { "enum": ["1"], "example": "1", "type": "string" }
         }
       ],
       "path": "/api/v1/health",
       "responses": {
-        "200": ["application/json"],
-        "400": ["application/problem+json"]
+        "200": {
+          "application/json": { "$ref": "#/components/schemas/HealthResponse" }
+        },
+        "400": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        }
       }
     },
     {
@@ -22,42 +27,133 @@
         {
           "in": "header",
           "name": "API-Version",
-          "required": false
+          "required": false,
+          "schema": { "enum": ["1"], "example": "1", "type": "string" }
+        },
+        {
+          "in": "header",
+          "name": "X-Organization-ID",
+          "required": true,
+          "schema": { "format": "uuid", "type": "string" }
         }
       ],
       "path": "/api/v1/projects",
       "requestBody": {
-        "content": ["application/json"],
+        "content": {
+          "application/json": { "$ref": "#/components/schemas/CreateProjectRequest" }
+        },
         "required": true
       },
       "responses": {
-        "201": ["application/json"],
-        "400": ["application/problem+json"],
-        "409": ["application/problem+json"],
-        "500": ["application/problem+json"]
+        "201": {
+          "application/json": { "$ref": "#/components/schemas/ProjectResponse" }
+        },
+        "400": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "401": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "403": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "409": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "500": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "503": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        }
+      }
+    },
+    {
+      "method": "get",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "projectId",
+          "required": true,
+          "schema": { "format": "uuid", "type": "string" }
+        },
+        {
+          "in": "header",
+          "name": "API-Version",
+          "required": false,
+          "schema": { "enum": ["1"], "example": "1", "type": "string" }
+        }
+      ],
+      "path": "/api/v1/projects/{projectId}/protected-feature",
+      "responses": {
+        "200": {
+          "application/json": {
+            "$ref": "#/components/schemas/ProtectedFeatureResponse"
+          }
+        },
+        "400": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "401": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "403": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "404": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "500": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        },
+        "503": {
+          "application/problem+json": { "$ref": "#/components/schemas/ProblemDetail" }
+        }
       }
     }
   ],
   "schemas": {
     "CreateProjectRequest": {
-      "properties": {},
+      "properties": {
+        "name": { "maxLength": 100, "minLength": 3, "type": "string" }
+      },
       "required": ["name"]
     },
     "HealthResponse": {
       "properties": {
-        "service": ["generated-app"],
-        "status": ["ok"],
-        "version": [1]
+        "service": { "enum": ["generated-app"], "type": "string" },
+        "status": { "enum": ["ok"], "type": "string" },
+        "version": { "enum": [1], "type": "number" }
       },
       "required": ["service", "status", "version"]
     },
     "ProblemDetail": {
-      "properties": {},
+      "properties": {
+        "correlationId": { "minLength": 1, "type": "string" },
+        "detail": { "minLength": 1, "type": "string" },
+        "instance": { "minLength": 1, "type": "string" },
+        "status": { "maximum": 599, "minimum": 400, "type": "integer" },
+        "title": { "minLength": 1, "type": "string" },
+        "type": { "format": "uri", "type": "string" }
+      },
       "required": ["correlationId", "detail", "instance", "status", "title", "type"]
     },
     "ProjectResponse": {
-      "properties": {},
+      "properties": {
+        "createdAt": { "format": "date-time", "type": "string" },
+        "id": { "format": "uuid", "type": "string" },
+        "name": { "maxLength": 100, "minLength": 3, "type": "string" },
+        "revision": { "exclusiveMinimum": 0, "type": "integer" }
+      },
       "required": ["createdAt", "id", "name", "revision"]
+    },
+    "ProtectedFeatureResponse": {
+      "properties": {
+        "capability": { "enum": ["protected-insights"], "type": "string" },
+        "projectId": { "format": "uuid", "type": "string" },
+        "status": { "enum": ["available"], "type": "string" }
+      },
+      "required": ["capability", "projectId", "status"]
     }
   }
 }

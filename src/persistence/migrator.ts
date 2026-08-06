@@ -22,6 +22,22 @@ export async function migrateToLatest(
   database: Database,
   migrationDirectory = defaultMigrationDirectory(),
 ): Promise<AppliedMigration[]> {
+  return migrate(database, undefined, migrationDirectory);
+}
+
+export async function migrateToVersion(
+  database: Database,
+  targetVersion: string,
+  migrationDirectory = defaultMigrationDirectory(),
+): Promise<AppliedMigration[]> {
+  return migrate(database, targetVersion, migrationDirectory);
+}
+
+async function migrate(
+  database: Database,
+  targetVersion: string | undefined,
+  migrationDirectory: string,
+): Promise<AppliedMigration[]> {
   const migrations = await loadMigrations(migrationDirectory);
 
   return database.transaction(async (session) => {
@@ -31,6 +47,7 @@ export async function migrateToLatest(
 
     const appliedVersions = new Set(applied.map(({ version }) => version));
     for (const migration of migrations) {
+      if (targetVersion !== undefined && migration.version > targetVersion) break;
       if (appliedVersions.has(migration.version)) continue;
       await session.query(migration.up);
       await session.query(

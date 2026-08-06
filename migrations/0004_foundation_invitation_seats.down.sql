@@ -1,0 +1,4 @@
+DROP TABLE foundation_seat_assignments;
+DROP TABLE foundation_seat_reservations;
+DROP TABLE foundation_organization_invitations;
+DROP TABLE foundation_seat_ledgers;

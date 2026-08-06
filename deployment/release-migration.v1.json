@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "executor": "trusted-release",
+  "database": {
+    "provider": "neon",
+    "credential": "DATABASE_URL",
+    "migrationCommand": "npm run migrate"
+  },
+  "cutover": {
+    "requiresMigrationReceipt": true,
+    "receipt": {
+      "exactCommit": true,
+      "migrationChecksums": true,
+      "completedAt": true
+    },
+    "receiptCommand": "npm run release:emit-migration-receipt -- --commit <git-commit> --output <receipt-path>",
+    "verificationCommand": "npm run release:verify-cutover -- --commit <git-commit> --receipt <receipt-path>",
+    "productionPromotion": {
+      "invokedBy": "trusted-production-promotion-controller",
+      "commands": [
+        "npm run migrate",
+        "npm run release:emit-migration-receipt -- --commit <git-commit> --output <receipt-path>",
+        "npm run release:verify-cutover -- --commit <git-commit> --receipt <receipt-path>",
+        "npm run deploy:vercel"
+      ]
+    }
+  }
+}

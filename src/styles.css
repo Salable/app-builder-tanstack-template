@@ -30,3 +30,27 @@
 :root[data-theme="dark"] header > p:last-child {
   color: #cbd5e1;
 }
+
+:root[data-theme="dark"] .text-violet-700 {
+  color: #c4b5fd;
+}
+
+.theme-selector {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.theme-selector-button[aria-pressed="true"] {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-theme="dark"] .theme-selector {
+  background: #334155;
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .theme-selector-button[aria-pressed="true"] {
+  background: #f8fafc;
+  color: #0f172a;
+}

@@ -38,25 +38,43 @@ function ProtectedRoute() {
               Sign out
             </Button>
           </section>
-        ) : (
+        ) : result.status === "unauthenticated" ? (
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold">Authentication required</h2>
             <p className="mt-3 text-slate-700">
               Protected account details are resolved on the server from a
               database-backed session.
             </p>
-            <Button
-              className="mt-5 rounded-xl bg-violet-700 px-5 py-3 font-semibold text-white"
-              onClick={() => {
-                void authClient.signIn.social({
-                  callbackURL: "/protected",
-                  provider: "github",
-                });
-              }}
-              type="button"
-            >
-              Sign in with GitHub
-            </Button>
+            {result.providers.github ? (
+              <Button
+                className="mt-5 rounded-xl bg-violet-700 px-5 py-3 font-semibold text-white"
+                onClick={() => {
+                  void authClient.signIn.social({
+                    callbackURL: "/protected",
+                    provider: "github",
+                  });
+                }}
+                type="button"
+              >
+                Sign in with GitHub
+              </Button>
+            ) : (
+              <p className="mt-5 text-sm text-slate-600">
+                GitHub sign-in is not configured for this deployment.
+              </p>
+            )}
+          </section>
+        ) : (
+          <section
+            aria-labelledby="identity-unavailable-heading"
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <h2 className="text-lg font-semibold" id="identity-unavailable-heading">
+              Identity service unavailable
+            </h2>
+            <p className="mt-3 text-slate-700">
+              Sign-in is not configured for this deployment. Please try again later.
+            </p>
           </section>
         )}
 

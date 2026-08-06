@@ -6,6 +6,7 @@ import {
   ApiVersionRequestHeadersSchema,
   CreateProjectRequestSchema,
   HealthResponseSchema,
+  OrganizationRequestHeadersSchema,
   ProblemDetailSchema,
   ProjectPathParametersSchema,
   ProjectResponseSchema,
@@ -22,7 +23,10 @@ import {
   IdentityConfigurationError,
 } from "../identity/identity-provider";
 import { getProjectRepository } from "../projects/repository-provider";
-import { ProjectNameConflictError } from "../projects/project-repository";
+import {
+  ProjectNameConflictError,
+  ProjectOrganizationAccessError,
+} from "../projects/project-repository";
 
 const API_VERSION_HEADER = "API-Version";
 const CORRELATION_ID_HEADER = "X-Correlation-ID";
@@ -118,7 +122,7 @@ const createProjectRoute = createRoute({
       },
       required: true,
     },
-    headers: ApiVersionRequestHeadersSchema,
+    headers: OrganizationRequestHeadersSchema,
   },
   responses: {
     201: {
@@ -137,6 +141,14 @@ const createProjectRoute = createRoute({
       },
       description: "The request or API version is invalid.",
     },
+    401: {
+      content: { "application/problem+json": { schema: ProblemDetailSchema } },
+      description: "A database-backed session is required.",
+    },
+    403: {
+      content: { "application/problem+json": { schema: ProblemDetailSchema } },
+      description: "The user is not a member of the requested organization.",
+    },
     409: {
       content: {
         "application/problem+json": {
@@ -153,13 +165,35 @@ const createProjectRoute = createRoute({
       },
       description: "The transaction failed without exposing internal details.",
     },
+    503: {
+      content: {
+        "application/problem+json": {
+          schema: ProblemDetailSchema,
+        },
+      },
+      description: "The identity boundary is not configured.",
+    },
   },
   tags: ["projects"],
 });
 
 publicApi.openapi(createProjectRoute, async (context) => {
   try {
-    const project = await getProjectRepository().create(context.req.valid("json"));
+    const identity = await getIdentityProvider().authenticate(context.req.raw.headers);
+    if (identity === null) {
+      return problem(context, {
+        detail: "A valid session is required.",
+        status: 401,
+        title: "Unauthorized",
+        type: `${PROBLEM_BASE}/unauthorized`,
+      });
+    }
+    const organizationId = context.req.valid("header")["X-Organization-ID"];
+    const project = await getProjectRepository().create(
+      context.req.valid("json"),
+      organizationId,
+      identity.userId,
+    );
     return context.json(ProjectResponseSchema.parse(project), 201);
   } catch (error) {
     if (error instanceof ProjectNameConflictError) {
@@ -168,6 +202,14 @@ publicApi.openapi(createProjectRoute, async (context) => {
         status: 409,
         title: "Project name conflict",
         type: `${PROBLEM_BASE}/project-name-conflict`,
+      });
+    }
+    if (error instanceof ProjectOrganizationAccessError) {
+      return problem(context, {
+        detail: "The user is not a member of the requested organization.",
+        status: 403,
+        title: "Forbidden",
+        type: `${PROBLEM_BASE}/forbidden`,
       });
     }
     throw error;
@@ -333,9 +375,23 @@ const openApiConfig = {
   servers: [{ url: "/" }],
 };
 
-publicApi.get("/api/v1/openapi.json", (context) =>
-  context.json(openApiDocument),
-);
+publicApi.get("/api/v1/openapi.json", (context) => context.json(openApiDocument));
+
+publicApi.get("/api/v1/test/network-deny-proof", async (context) => {
+  const environment = globalThis.process.env;
+  if (
+    environment.NODE_ENV !== "test" ||
+    environment.APP_BUILDER_TEST_NETWORK_DENY_PROOF !== "1"
+  ) {
+    return context.notFound();
+  }
+  try {
+    await fetch("https://api.example.test/should-not-run");
+    return context.text("outbound request unexpectedly succeeded", 500);
+  } catch (error) {
+    return context.text(String(error));
+  }
+});
 
 export function getOpenApiDocument() {
   return publicApi.getOpenAPI31Document(openApiConfig);

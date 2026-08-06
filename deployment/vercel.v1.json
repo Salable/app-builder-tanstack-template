@@ -9,22 +9,32 @@
   },
   "build": {
     "installCommand": "npm ci",
-    "buildCommand": "npm run build:vercel",
+    "buildCommand": "npm run deploy:vercel",
     "outputDirectory": ".vercel/output"
   },
+  "installation": {
+    "method": "vercel-deploy-button",
+    "repositoryOwnership": "vercel-created",
+    "requiredIntegrations": [
+      {
+        "type": "connectable",
+        "slug": "app-builder"
+      },
+      {
+        "type": "native-product",
+        "slug": "neon",
+        "productSlug": "neon",
+        "protocol": "storage"
+      }
+    ],
+    "databaseCredentialOwner": "vercel-marketplace:neon"
+  },
   "environment": [
-    {
-      "name": "DATABASE_URL",
-      "required": true,
-      "secret": true,
-      "source": "vercel-marketplace:neon",
-      "phase": "runtime"
-    },
     {
       "name": "BETTER_AUTH_URL",
       "required": true,
       "secret": false,
-      "source": "deployment-url",
+      "source": "vercel-system-url",
       "phase": "runtime"
     },
     {
@@ -32,6 +42,55 @@
       "required": true,
       "secret": true,
       "source": "generated",
+      "phase": "runtime"
+    },
+    {
+      "name": "DATABASE_URL",
+      "required": true,
+      "secret": true,
+      "source": "vercel-marketplace:neon",
+      "phase": "build-runtime"
+    },
+    {
+      "name": "APP_BUILDER_DELIVERY_STAGE",
+      "required": true,
+      "secret": false,
+      "source": "generated",
+      "phase": "build-runtime"
+    },
+    {
+      "name": "APP_ENVIRONMENT_ID",
+      "required": true,
+      "secret": false,
+      "source": "generated",
+      "phase": "runtime"
+    },
+    {
+      "name": "APP_BUILDER_CONTROL_PLANE_URL",
+      "required": true,
+      "secret": false,
+      "source": "generated",
+      "phase": "runtime"
+    },
+    {
+      "name": "APP_BUILDER_PROJECT_ID",
+      "required": true,
+      "secret": false,
+      "source": "generated",
+      "phase": "runtime"
+    },
+    {
+      "name": "APP_BUILDER_FEATURE_FLAG_RUNTIME_TOKEN",
+      "required": true,
+      "secret": true,
+      "source": "generated",
+      "phase": "runtime"
+    },
+    {
+      "name": "APP_BUILDER_ENTITLED_ORGANIZATION_IDS",
+      "required": false,
+      "secret": false,
+      "source": "user",
       "phase": "runtime"
     },
     {
@@ -49,11 +108,6 @@
       "phase": "runtime"
     }
   ],
-  "database": {
-    "provider": "neon",
-    "integration": "neon",
-    "migrationCommand": "npm run migrate"
-  },
   "routes": {
     "application": "/",
     "publicApi": "/api/v1",
@@ -82,5 +136,11 @@
       "openapi",
       "security-headers"
     ]
+  },
+  "previewMigration": {
+    "command": "npm run migrate",
+    "stageVariable": "APP_BUILDER_DELIVERY_STAGE",
+    "runWhen": "PREVIEW",
+    "productionExecutor": "trusted-release"
   }
 }

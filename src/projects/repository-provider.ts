@@ -9,6 +9,12 @@ export function getProjectRepository(): ProjectRepository {
   return repository;
 }
 
+export function setProjectRepositoryForTesting(
+  replacement: ProjectRepository | undefined,
+): void {
+  repository = replacement;
+}
+
 function createProjectRepository(): ProjectRepository {
   const connectionString = process.env.DATABASE_URL;
   if (connectionString === undefined || connectionString.trim() === "") {
@@ -17,6 +23,14 @@ function createProjectRepository(): ProjectRepository {
 
   return new PostgresProjectRepository(
     new PostgresDatabase(connectionString),
-    process.env.APP_BUILDER_TEST_FAULT_AFTER_INSERT_NAME,
+    readPersistenceFaultName(process.env),
   );
+}
+
+export function readPersistenceFaultName(
+  environment: NodeJS.ProcessEnv,
+): string | undefined {
+  return environment.NODE_ENV === "test"
+    ? environment.APP_BUILDER_TEST_FAULT_AFTER_INSERT_NAME
+    : undefined;
 }
