@@ -34,7 +34,7 @@ const startupError = new Promise<never>((_resolve, reject) => {
 try {
   const page = await waitForResponse("/");
   assert.equal(page.status, 200);
-  assert.match(await page.text(), /Generated App Foundation/);
+  assert.match(await page.text(), /Ready for your product/);
 
   const health = await waitForResponse("/api/v1/health", {
     headers: { "API-Version": "1" },

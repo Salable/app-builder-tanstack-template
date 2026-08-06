@@ -17,9 +17,9 @@ function ProtectedRoute() {
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
         <header className="space-y-3">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-            Server authorization proof
+            Account
           </p>
-          <h1 className="text-4xl font-semibold tracking-tight">Protected account</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">Account access</h1>
         </header>
 
         {result.status === "authenticated" ? (
@@ -79,7 +79,7 @@ function ProtectedRoute() {
         )}
 
         <Link className="font-semibold text-violet-700 underline" to="/">
-          Return to foundation
+          Return home
         </Link>
       </div>
     </main>

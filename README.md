@@ -6,6 +6,13 @@ Base UI wrappers, React Hook Form/Zod, TanStack Query, bounded client-only
 Zustand state, Better Auth, OpenAPI 3.1, and an Orval-generated fetch/Query
 client.
 
+The deployed root page is intentionally a neutral readiness shell. It contains no
+sample product, editable demo form, seeded customer data, or domain-specific call to
+action. App Builder plans against this repository after connection and replaces that
+shell with the requested product. The API, identity, organization, entitlement,
+feature-flag, PostgreSQL, and deployment code below are reusable implementation seams,
+not an example application presented to the end user.
+
 In a generated standalone repository, run:
 
 ```sh

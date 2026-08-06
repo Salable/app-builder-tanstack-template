@@ -23,7 +23,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         content: "A production-readiness proof for App Builder generated applications.",
         name: "description",
       },
-      { title: "Generated App Foundation" },
+      { title: "App Builder Starter" },
     ],
   }),
 });
