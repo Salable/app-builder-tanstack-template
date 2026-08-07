@@ -71,14 +71,15 @@ function Home() {
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
         <header className="space-y-3">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-            App Builder starter
+            Salable App Builder
           </p>
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-            Ready for your product
+            TanStack Starter
           </h1>
           <p className="max-w-2xl text-base leading-7 text-slate-600">
-            The application foundation is deployed and connected. Continue in App
-            Builder to plan and build the product.
+            A maintained application foundation with the core API, database,
+            authentication, testing, and deployment seams ready for your product. Return
+            to App Builder to define what you want to build and start the work.
           </p>
         </header>
 
@@ -89,7 +90,7 @@ function Home() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 id="runtime-heading" className="text-lg font-semibold">
-                Application foundation
+                Starter status
               </h2>
               <p className="mt-1 text-sm text-slate-600" role="status">
                 {healthStatusText(health)}
