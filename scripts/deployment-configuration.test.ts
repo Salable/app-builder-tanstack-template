@@ -49,6 +49,9 @@ describe("deployment environment contract", () => {
     expect(packageJson.scripts["deploy:vercel"]).toBe(
       "node --import tsx scripts/deploy-vercel.ts",
     );
+    expect(packageJson.scripts.build).toBe(
+      "npm run generate && NODE_ENV=production vite build",
+    );
     expect(manifest.environment).toContainEqual(
       expect.objectContaining({
         name: "APP_BUILDER_DELIVERY_STAGE",

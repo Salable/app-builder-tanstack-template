@@ -10,6 +10,14 @@ describe("Vercel deployment plan", () => {
     ]);
   });
 
+  it("treats staged Development delivery as a preview deployment", () => {
+    expect(deploymentScripts("DEVELOPMENT")).toEqual([
+      "migrate",
+      "build:vercel",
+      "check:deployment:built",
+    ]);
+  });
+
   it("never repeats the separately receipted Production migration", () => {
     expect(deploymentScripts("PRODUCTION")).toEqual([
       "build:vercel",

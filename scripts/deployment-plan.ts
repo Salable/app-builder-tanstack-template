@@ -1,4 +1,4 @@
-export type AppBuilderDeliveryStage = "PREVIEW" | "PRODUCTION";
+export type AppBuilderDeliveryStage = "DEVELOPMENT" | "PREVIEW" | "PRODUCTION";
 export type DeploymentScript = "migrate" | "build:vercel" | "check:deployment:built";
 
 /**
@@ -9,13 +9,13 @@ export type DeploymentScript = "migrate" | "build:vercel" | "check:deployment:bu
 export function deploymentScripts(
   value: string | undefined,
 ): readonly DeploymentScript[] {
-  if (value === "PREVIEW") {
+  if (value === "DEVELOPMENT" || value === "PREVIEW") {
     return ["migrate", "build:vercel", "check:deployment:built"];
   }
   if (value === "PRODUCTION") {
     return ["build:vercel", "check:deployment:built"];
   }
   throw new Error(
-    "APP_BUILDER_DELIVERY_STAGE must be PREVIEW or PRODUCTION for a Vercel deployment.",
+    "APP_BUILDER_DELIVERY_STAGE must be DEVELOPMENT, PREVIEW, or PRODUCTION for a Vercel deployment.",
   );
 }

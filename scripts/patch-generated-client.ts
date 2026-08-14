@@ -5,8 +5,8 @@ let source = await readFile(path, "utf8");
 
 const replacements: Array<[string, string]> = [
   [
-    `  createProjectRequest: CreateProjectRequest,\n  options?: RequestInit,\n): Promise<ProjectResponse> => {\n  return apiFetch<ProjectResponse>(getPostApiV1ProjectsUrl(), {`,
-    `  createProjectRequest: CreateProjectRequest,\n  organizationId: string,\n  options?: RequestInit,\n): Promise<ProjectResponse> => {\n  const headers = new Headers(options?.headers);\n  headers.set("Content-Type", "application/json");\n  headers.set("X-Organization-ID", organizationId);\n  return apiFetch<ProjectResponse>(getPostApiV1ProjectsUrl(), {`,
+    `  createProjectRequest: CreateProjectRequest,\n  options?: Parameters<typeof apiFetch>[1],\n): Promise<ProjectResponse> => {\n  return apiFetch<ProjectResponse>(getPostApiV1ProjectsUrl(), {`,
+    `  createProjectRequest: CreateProjectRequest,\n  organizationId: string,\n  options?: Parameters<typeof apiFetch>[1],\n): Promise<ProjectResponse> => {\n  const headers = new Headers(options?.headers);\n  headers.set("Content-Type", "application/json");\n  headers.set("X-Organization-ID", organizationId);\n  return apiFetch<ProjectResponse>(getPostApiV1ProjectsUrl(), {`,
   ],
   [
     `    headers: { "Content-Type": "application/json", ...options?.headers },`,

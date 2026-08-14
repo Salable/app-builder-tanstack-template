@@ -24,6 +24,13 @@ npm run dev
 Within the App Builder Platform source workspace, append
 `--workspace @app-builder/generated-tanstack-start` to package commands.
 
+`npm run check` is the single authoritative local aggregate. It runs quality,
+unit, integration, build, deployment-output, and SSR checks sequentially. The
+named constituent scripts are useful for focused diagnosis and isolated CI jobs,
+but must not run concurrently with `npm run check` or with another command that
+shares generated files, build output, caches, ports, or the disposable database.
+After the final change, run `npm run check` once by itself.
+
 The public API is rooted at `/api/v1`. A missing `API-Version` header defaults
 to version 1; unsupported versions return RFC 9457 Problem Details. Regenerate
 the checked-in OpenAPI and TypeScript/TanStack Query client with:
@@ -128,10 +135,10 @@ repository and project from the maintained public template; Neon injects
 `DATABASE_URL`, and the App Builder Vercel integration supplies generated runtime
 configuration. Agent workers receive no managed database credentials.
 
-`npm run deploy:vercel` runs the maintained stage-aware deployment plan. Preview
-builds first run `npm run migrate` against their isolated branch, then build and
-verify the Build Output API v3 package. This applies accepted `develop` migrations
-to shared preview and applies the exact release source migrations to the
+`npm run deploy:vercel` runs the maintained stage-aware deployment plan.
+Development and explicit Preview builds first run `npm run migrate` against their
+isolated branch, then build and verify the Build Output API v3 package. This
+applies accepted `develop` migrations to shared preview and applies the exact release source migrations to the
 production-derived candidate branch before either environment can become
 healthy. A failed migration fails the Vercel build.
 

@@ -15,6 +15,7 @@ const server = spawn(process.execPath, [".output/server/index.mjs"], {
     DATABASE_URL: undefined,
     BETTER_AUTH_URL: undefined,
     BETTER_AUTH_SECRET: undefined,
+    NODE_PG_FORCE_NATIVE: undefined,
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -33,7 +34,7 @@ const startupError = new Promise<never>((_resolve, reject) => {
 
 try {
   const page = await waitForResponse("/");
-  assert.equal(page.status, 200);
+  assert.equal(page.status, 200, output.join(""));
   assert.match(await page.text(), /TanStack Starter/);
 
   const health = await waitForResponse("/api/v1/health", {
