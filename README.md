@@ -29,7 +29,10 @@ unit, integration, build, deployment-output, and SSR checks sequentially. The
 named constituent scripts are useful for focused diagnosis and isolated CI jobs,
 but must not run concurrently with `npm run check` or with another command that
 shares generated files, build output, caches, ports, or the disposable database.
-After the final change, run `npm run check` once by itself.
+A focused diagnosis runs one constituent for one observed failure; do not rebuild
+the aggregate by manually chaining several constituents. After the final change,
+run `npm run check` once by itself and do not repeat its constituents after it
+passes.
 
 The public API is rooted at `/api/v1`. A missing `API-Version` header defaults
 to version 1; unsupported versions return RFC 9457 Problem Details. Regenerate
