@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "template": {
+    "repositoryId": 1317325158,
+    "owner": "Salable",
+    "name": "app-builder-tanstack-template"
+  },
+  "templateRevision": "ddd2e70d7dee7e5aaa395884d06764e0cc1a5352",
+  "templateTreeHash": "dcb314a8d39bfa0e1f8ff03afe3d727257742d51d01f61d3f0accd91e6504e32",
+  "generatedAt": "2026-08-25T09:33:25.000Z"
+}
