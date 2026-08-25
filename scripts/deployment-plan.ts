@@ -2,9 +2,9 @@ export type AppBuilderDeliveryStage = "DEVELOPMENT" | "PREVIEW" | "PRODUCTION";
 export type DeploymentScript = "migrate" | "build:vercel" | "check:deployment:built";
 
 /**
- * Preview databases are isolated Neon branches, so their migrations run inside
- * trusted Vercel build execution before the application build. Production
- * migrations remain a separately receipted App Builder release operation.
+ * Development and Preview migrations run inside Vercel's provider-owned build.
+ * The phase-one production command is a source merge only, so Production builds
+ * deliberately do not receive database-migration authority.
  */
 export function deploymentScripts(
   value: string | undefined,

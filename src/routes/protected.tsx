@@ -45,24 +45,6 @@ function ProtectedRoute() {
               Protected account details are resolved on the server from a
               database-backed session.
             </p>
-            {result.providers.github ? (
-              <Button
-                className="mt-5 rounded-xl bg-violet-700 px-5 py-3 font-semibold text-white"
-                onClick={() => {
-                  void authClient.signIn.social({
-                    callbackURL: "/protected",
-                    provider: "github",
-                  });
-                }}
-                type="button"
-              >
-                Sign in with GitHub
-              </Button>
-            ) : (
-              <p className="mt-5 text-sm text-slate-600">
-                GitHub sign-in is not configured for this deployment.
-              </p>
-            )}
           </section>
         ) : (
           <section

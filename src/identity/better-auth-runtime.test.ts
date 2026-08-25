@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { IdentityConfigurationError } from "./identity-provider";
 import { readBetterAuthConfig } from "./better-auth-config";
 
 const baseEnvironment = {
@@ -9,20 +8,14 @@ const baseEnvironment = {
 };
 
 describe("Better Auth runtime configuration", () => {
-  it("accepts the production GitHub identity boundary", () => {
+  it("accepts the self-hosted production identity boundary without a sign-in provider", () => {
     expect(
       readBetterAuthConfig({
         ...baseEnvironment,
-        GITHUB_APP_CLIENT_ID: "github-client",
-        GITHUB_APP_CLIENT_SECRET: "github-secret",
         NODE_ENV: "production",
       }),
     ).toMatchObject({
       enableTestPasswordAuth: false,
-      github: {
-        clientId: "github-client",
-        clientSecret: "github-secret",
-      },
       secureCookies: false,
     });
   });
@@ -36,24 +29,16 @@ describe("Better Auth runtime configuration", () => {
       }),
     ).toMatchObject({
       enableTestPasswordAuth: true,
-      github: undefined,
     });
   });
 
-  it("rejects partial GitHub configuration and permits credential-free production", () => {
-    expect(() =>
-      readBetterAuthConfig({
-        ...baseEnvironment,
-        GITHUB_APP_CLIENT_ID: "github-client",
-        NODE_ENV: "production",
-      }),
-    ).toThrow(IdentityConfigurationError);
+  it("does not enable the test sign-in method in production", () => {
     expect(
       readBetterAuthConfig({
         ...baseEnvironment,
         APP_BUILDER_TEST_AUTH: "email-password",
         NODE_ENV: "production",
       }),
-    ).toMatchObject({ enableTestPasswordAuth: false, github: undefined });
+    ).toMatchObject({ enableTestPasswordAuth: false });
   });
 });

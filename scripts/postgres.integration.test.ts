@@ -8,11 +8,7 @@ import {
   ProtectedFeatureResponseSchema,
 } from "../src/api/contracts";
 import { PostgresDatabase } from "../src/persistence/database";
-import {
-  migrateToLatest,
-  migrateToVersion,
-  rollbackLastMigration,
-} from "../src/persistence/migrator";
+import { migrateToLatest, rollbackLastMigration } from "../src/persistence/migrator";
 import { PostgresProjectAccessRepository } from "../src/authorization/project-access";
 import { installExternalNetworkDeny } from "./network-deny";
 import {
@@ -59,17 +55,6 @@ before(async () => {
   const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
     scripts: Record<string, string>;
   };
-  const releaseMigration = JSON.parse(
-    readFileSync("deployment/release-migration.v1.json", "utf8"),
-  ) as {
-    schemaVersion: number;
-    executor: string;
-    database: { credential: string; migrationCommand: string };
-  };
-  assert.equal(releaseMigration.schemaVersion, 1);
-  assert.equal(releaseMigration.executor, "trusted-release");
-  assert.equal(releaseMigration.database.credential, "DATABASE_URL");
-  assert.equal(releaseMigration.database.migrationCommand, "npm run migrate");
   assert.equal(packageJson.scripts.migrate, "node --import tsx scripts/migrate.ts");
   const previewDeployment = spawnSync("npm", ["run", "deploy:vercel"], {
     cwd: process.cwd(),
@@ -134,33 +119,8 @@ before(async () => {
   );
 
   assert.deepEqual(
-    (await migrateToVersion(database, "0002")).map(({ version }) => version),
-    ["0001", "0002"],
-  );
-  await database.query(
-    `INSERT INTO projects (id, name, normalized_name)
-     VALUES
-       ('00000000-0000-4000-8000-000000000010', 'Duplicate', 'duplicate'),
-       ('00000000-0000-4000-8000-000000000011', 'DUPLICATE', 'duplicate')`,
-  );
-  assert.deepEqual(
     (await migrateToLatest(database)).map(({ version }) => version),
-    ["0001", "0002", "0003", "0004"],
-  );
-  const migratedDuplicates = await database.query<{
-    name: string;
-    normalized_name: string;
-  }>(`SELECT name, normalized_name FROM projects ORDER BY id`);
-  assert.deepEqual(migratedDuplicates.rows, [
-    { name: "Duplicate", normalized_name: "duplicate" },
-    {
-      name: "DUPLICATE (legacy duplicate 00000000-0000-4000-8000-000000000011)",
-      normalized_name:
-        "duplicate (legacy duplicate 00000000-0000-4000-8000-000000000011)",
-    },
-  ]);
-  await database.query(
-    'TRUNCATE projects, organization_memberships, organizations, "account", "session", "verification", "user" CASCADE',
+    ["0001"],
   );
   await database.query(
     `INSERT INTO "user" (id, name, email, "emailVerified")
@@ -180,14 +140,7 @@ before(async () => {
          '55555555-5555-4555-8555-555555555555', 'recovery-user')`,
   );
 
-  assert.equal((await rollbackLastMigration(database))?.version, "0004");
-  assert.equal((await rollbackLastMigration(database))?.version, "0003");
-
-  assert.deepEqual(
-    (await migrateToLatest(database)).map(({ version }) => version),
-    ["0001", "0002", "0003", "0004"],
-  );
-  const afterRecovery = await database.query<{
+  const currentRelationships = await database.query<{
     user_id: string;
     session_user_id: string;
     account_user_id: string;
@@ -209,7 +162,7 @@ before(async () => {
      JOIN projects p ON p.organization_id = o.id AND p.owner_user_id = u.id
      WHERE u.id = 'recovery-user'`,
   );
-  assert.deepEqual(afterRecovery.rows[0], {
+  assert.deepEqual(currentRelationships.rows[0], {
     user_id: "recovery-user",
     session_user_id: "recovery-user",
     account_user_id: "recovery-user",
@@ -218,15 +171,22 @@ before(async () => {
     membership_user_id: "recovery-user",
     owner_user_id: "recovery-user",
   });
-  const recoveredAccess = await new PostgresProjectAccessRepository(
+  const currentAccess = await new PostgresProjectAccessRepository(
     database,
   ).findOwnedProject("66666666-6666-4666-8666-666666666666", "recovery-user");
-  assert.deepEqual(recoveredAccess, {
+  assert.deepEqual(currentAccess, {
     organizationId: "55555555-5555-4555-8555-555555555555",
     projectId: "66666666-6666-4666-8666-666666666666",
   });
-  await database.query(
-    'TRUNCATE projects, organization_memberships, organizations, "account", "session", "verification", "user" CASCADE',
+
+  assert.equal((await rollbackLastMigration(database))?.version, "0001");
+  const rolledBackSchema = await database.query<{ projects: string | null }>(
+    "SELECT to_regclass('public.projects')::text AS projects",
+  );
+  assert.equal(rolledBackSchema.rows[0]?.projects, null);
+  assert.deepEqual(
+    (await migrateToLatest(database)).map(({ version }) => version),
+    ["0001"],
   );
 
   server = spawn(
@@ -281,7 +241,7 @@ describe("generated application PostgreSQL boundary", () => {
     );
     assert.deepEqual(
       migrations.rows.map(({ version }) => version),
-      ["0001", "0002", "0003", "0004"],
+      ["0001"],
     );
   });
 
@@ -419,7 +379,10 @@ describe("generated application PostgreSQL boundary", () => {
 
   it("covers every documented health and project outcome through HTTP", async () => {
     const health = await fetch(`${origin}/api/v1/health`, {
-      headers: { "X-Correlation-ID": "corr_postgres" },
+      headers: {
+        "API-Version": "1",
+        "X-Correlation-ID": "corr_postgres",
+      },
     });
     assert.equal(health.status, 200);
     assert.equal(health.headers.get("API-Version"), "1");
@@ -649,7 +612,9 @@ describe("generated application PostgreSQL boundary", () => {
   });
 
   it("denies undeclared third-party network access in the application process", async () => {
-    const response = await fetch(`${origin}/api/v1/test/network-deny-proof`);
+    const response = await fetch(`${origin}/api/v1/test/network-deny-proof`, {
+      headers: { "API-Version": "1" },
+    });
     assert.equal(response.status, 200);
     assert.match(await response.text(), /External network access denied/);
   });
@@ -758,7 +723,9 @@ async function waitForServer(): Promise<void> {
       );
     }
     try {
-      const response = await fetch(`${origin}/api/v1/health`);
+      const response = await fetch(`${origin}/api/v1/health`, {
+        headers: { "API-Version": "1" },
+      });
       if (response.ok) return;
     } catch (error) {
       lastError = error;

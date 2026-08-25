@@ -9,7 +9,7 @@ export const ApiVersionHeaderSchema = z.literal("1").openapi({
 });
 
 export const ApiVersionRequestHeadersSchema = z.object({
-  "API-Version": ApiVersionHeaderSchema.optional(),
+  "API-Version": ApiVersionHeaderSchema,
 });
 
 export const OrganizationRequestHeadersSchema = ApiVersionRequestHeadersSchema.extend({

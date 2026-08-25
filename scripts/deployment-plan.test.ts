@@ -18,7 +18,7 @@ describe("Vercel deployment plan", () => {
     ]);
   });
 
-  it("never repeats the separately receipted Production migration", () => {
+  it("does not grant Production database-migration authority", () => {
     expect(deploymentScripts("PRODUCTION")).toEqual([
       "build:vercel",
       "check:deployment:built",

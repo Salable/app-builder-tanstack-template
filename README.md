@@ -34,8 +34,9 @@ the aggregate by manually chaining several constituents. After the final change,
 run `npm run check` once by itself and do not repeat its constituents after it
 passes.
 
-The public API is rooted at `/api/v1`. A missing `API-Version` header defaults
-to version 1; unsupported versions return RFC 9457 Problem Details. Regenerate
+The public API is rooted at `/api/v1` and requires `API-Version: 1`. Missing or
+unsupported versions return RFC 9457 Problem Details; no alias or default-version
+path exists. Regenerate
 the checked-in OpenAPI and TypeScript/TanStack Query client with:
 
 ```sh
@@ -51,15 +52,14 @@ checksum-protected migrations under a transaction-scoped advisory lock with:
 npm run migrate
 ```
 
-`migrate:rollback` reverses only the latest migration and is intended for a
-reviewed recovery rehearsal, followed by the normal forward migration. Identity
-migration 0003 cannot safely return to schema 0002, so its rollback retains the
-identity schema and data while removing only its migration-ledger entry; its
-idempotent forward migration restores that entry. The repository gate starts an
-immutable-digest PostgreSQL 18.3 container, proves that identity, organization,
-project ownership, invitation, seat, and authorization relationships survive
-recovery, and exercises the built HTTP server against that database. No live
-managed database is contacted.
+`migrate:rollback` reverses the current migration and is intended for a reviewed
+recovery rehearsal followed by the normal forward migration. The starter is
+greenfield: one initial migration creates the complete current schema, and no
+upgrade, compatibility, or old-schema data path exists. The repository gate
+starts an immutable-digest PostgreSQL 18.3 container, proves clean rollback and
+reapplication, then exercises identity, organization, project ownership,
+invitation, seat, and authorization relationships against the built HTTP server.
+No live managed database is contacted.
 
 The starter contains its runnable organization, invitation, and seat foundation
 under `src/foundation`; it never imports source from the App Builder Platform
@@ -68,23 +68,28 @@ standalone template root.
 
 ## Identity and authorization
 
-Better Auth 1.6.24 is mounted at `/api/auth` behind an application-owned
-identity contract. It uses PostgreSQL session rows, disables cookie session
-caching so revocation is authoritative, and configures secure HTTP-only
-cookies. Configure:
+The Vercel-installed Neon authentication choice is authoritative for generated
+application work. If Neon Auth was enabled, planning and delivery replace the
+starter's self-hosted adapter with the provisioned Neon Auth service; they never
+run both. If Neon Auth was disabled, Better Auth 1.6.24 remains mounted at
+`/api/auth` behind the application-owned identity contract. Its PostgreSQL
+sessions disable cookie caching so revocation is authoritative and use secure
+HTTP-only cookies. Configure the self-hosted mode with:
 
 ```sh
 DATABASE_URL=postgresql://...
 BETTER_AUTH_URL=http://localhost:3000
 BETTER_AUTH_SECRET=at-least-32-random-characters
-GITHUB_APP_CLIENT_ID=...
-GITHUB_APP_CLIENT_SECRET=...
 ```
 
-The GitHub OAuth callback is `/api/auth/callback/github`. Authentication only
-establishes identity: protected application routes independently verify
-organization membership, resource ownership, and entitlement. Provider IDs
-are not trusted as authorization decisions.
+The starter contains no third-party or social sign-in provider. GitHub, Google,
+Microsoft, and other external identity providers are added only when the user
+explicitly requests the named provider. It also contains no email-delivery
+provider and does not impose email verification, password-reset email, magic
+links, or email OTP until the user specifies how those flows should work.
+Authentication only establishes identity: protected application routes
+independently verify organization membership, resource ownership, and
+entitlement.
 
 The integration suite enables Better Auth email/password endpoints only when
 both `NODE_ENV=test` and `APP_BUILDER_TEST_AUTH=email-password` are set in its
@@ -140,37 +145,29 @@ configuration. Agent workers receive no managed database credentials.
 
 `npm run deploy:vercel` runs the maintained stage-aware deployment plan.
 Development and explicit Preview builds first run `npm run migrate` against their
-isolated branch, then build and verify the Build Output API v3 package. This
-applies accepted `develop` migrations to shared preview and applies the exact release source migrations to the
-production-derived candidate branch before either environment can become
-healthy. A failed migration fails the Vercel build.
+provider-owned Neon branch, then build and verify the Build Output API v3 package.
+A failed Preview migration fails that Vercel build.
 
-Production builds deliberately skip that preview migration step because App
-Builder's separate trusted release worker has already applied and receipted the
-exact migration artifact. The remaining build commands are:
+The phase-one production command only merges an exact reviewed `develop` source
+into `main`; it does not receive a production database credential or run a
+production migration. Vercel then builds Production from `main` with:
 
 ```sh
 npm run build:vercel
 npm run check:deployment:built
 ```
 
-Before application cutover, a separate trusted release job uses `DATABASE_URL`,
-runs `npm run migrate`, and emits the exact-commit, migration-checksum, and
-completion receipt required by `deployment/release-migration.v1.json`. Connect
-that job to the production promotion controller in the exact command order
-declared by the manifest: migrate, emit the receipt for the reviewed Git commit,
-verify that receipt and every migration checksum, then deploy. The verifier
-accepts the manifest's `--commit` and `--receipt` arguments (or the equivalent
-`RELEASE_COMMIT_SHA` and `RELEASE_MIGRATION_RECEIPT_PATH` trusted-job variables).
-The receipt and its verification are deliberately absent from the Vercel build
-environment; the build cannot authorize its own promotion.
+Tickets that require a Production schema change must remain out of the phase-one
+promotion until a separate trusted production-migration boundary is designed and
+approved. The starter intentionally contains no hidden release worker, cutover
+receipt script, deployment-promotion command, or production migration fallback.
 
 The Deploy Button requires the Vercel Marketplace Neon product so the deployed
 runtime receives its scoped `DATABASE_URL`; do not paste a Neon API key into App
 Builder. Before the first deployment, the required App Builder Vercel integration
 configures `BETTER_AUTH_URL` as Vercel's production-URL reference, supplies
 `BETTER_AUTH_SECRET`, and installs the environment-scoped App Builder runtime
-values. GitHub OAuth values are
-optional until sign-in is enabled. To enable protected insights, set
+values. Those Better Auth values do not override a verified Neon Auth selection
+or authorize a sign-in method. To enable protected insights, set
 the optional `APP_BUILDER_ENTITLED_ORGANIZATION_IDS` variable to a comma-separated
 list of organization UUIDs; omission grants that capability to no organization.

@@ -49,7 +49,9 @@ try {
     version: 1,
   });
 
-  const openApi = await waitForResponse("/api/v1/openapi.json");
+  const openApi = await waitForResponse("/api/v1/openapi.json", {
+    headers: { "API-Version": "1" },
+  });
   assert.equal(openApi.status, 200);
   assert.equal(((await openApi.json()) as { openapi: string }).openapi, "3.1.0");
 
@@ -57,8 +59,7 @@ try {
   assert.equal(protectedPage.status, 200);
   const protectedMarkup = await protectedPage.text();
   assert.match(protectedMarkup, /Authentication required/);
-  assert.match(protectedMarkup, /GitHub sign-in is not configured/);
-  assert.doesNotMatch(protectedMarkup, />Sign in with GitHub</);
+  assert.doesNotMatch(protectedMarkup, /Sign in with/);
 
   const staleCookiePage = await waitForResponse("/protected", {
     headers: { Cookie: "generated-app.session_token=stale" },

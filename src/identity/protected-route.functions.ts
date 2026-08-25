@@ -1,19 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { getIdentityProvider, IdentityConfigurationError } from "./identity-provider";
-import { readBetterAuthConfig } from "./better-auth-config";
-
-export function getIdentityProviderAvailability(
-  environment: Record<string, string | undefined> = process.env,
-) {
-  try {
-    const config = readBetterAuthConfig(environment);
-    return { github: config.github !== undefined };
-  } catch (error) {
-    if (!(error instanceof IdentityConfigurationError)) throw error;
-    return { github: false };
-  }
-}
 
 export const getProtectedRouteIdentity = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -28,7 +15,6 @@ export const getProtectedRouteIdentity = createServerFn({ method: "GET" }).handl
     }
     if (identity === null)
       return {
-        providers: getIdentityProviderAvailability(),
         status: "unauthenticated" as const,
       };
     return {

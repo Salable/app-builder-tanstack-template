@@ -33,19 +33,29 @@ describe("generated application public API", () => {
     try {
       process.env.NODE_ENV = "production";
       process.env.APP_BUILDER_TEST_NETWORK_DENY_PROOF = "1";
-      expect((await publicApi.request("/api/v1/test/network-deny-proof")).status).toBe(
-        404,
-      );
+      expect(
+        (
+          await publicApi.request("/api/v1/test/network-deny-proof", {
+            headers: { "API-Version": "1" },
+          })
+        ).status,
+      ).toBe(404);
 
       process.env.NODE_ENV = "test";
       delete process.env.APP_BUILDER_TEST_NETWORK_DENY_PROOF;
-      expect((await publicApi.request("/api/v1/test/network-deny-proof")).status).toBe(
-        404,
-      );
+      expect(
+        (
+          await publicApi.request("/api/v1/test/network-deny-proof", {
+            headers: { "API-Version": "1" },
+          })
+        ).status,
+      ).toBe(404);
 
       process.env.APP_BUILDER_TEST_NETWORK_DENY_PROOF = "1";
       vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("denied")));
-      const response = await publicApi.request("/api/v1/test/network-deny-proof");
+      const response = await publicApi.request("/api/v1/test/network-deny-proof", {
+        headers: { "API-Version": "1" },
+      });
       expect(response.status).toBe(200);
       await expect(response.text()).resolves.toContain("denied");
     } finally {
@@ -54,8 +64,16 @@ describe("generated application public API", () => {
     }
   });
 
-  it("defaults API version and returns correlation metadata", async () => {
-    const response = await publicApi.request("/api/v1/health");
+  it("requires the exact current API version and returns correlation metadata", async () => {
+    const missing = await publicApi.request("/api/v1/health");
+    expect(missing.status).toBe(400);
+    expect(ProblemDetailSchema.parse(await missing.json()).type).toContain(
+      "unsupported-api-version",
+    );
+
+    const response = await publicApi.request("/api/v1/health", {
+      headers: { "API-Version": "1" },
+    });
 
     expect(response.status).toBe(200);
     expect(response.headers.get("API-Version")).toBe("1");
@@ -93,14 +111,18 @@ describe("generated application public API", () => {
   });
 
   it("serves the checked-in OpenAPI contract without runtime regeneration", async () => {
-    const response = await publicApi.request("/api/v1/openapi.json");
+    const response = await publicApi.request("/api/v1/openapi.json", {
+      headers: { "API-Version": "1" },
+    });
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(openApiDocument);
   });
 
   it("uses the same sanitized problem boundary for unknown API routes", async () => {
-    const response = await publicApi.request("/api/v1/missing");
+    const response = await publicApi.request("/api/v1/missing", {
+      headers: { "API-Version": "1" },
+    });
 
     expect(response.status).toBe(404);
     expect(response.headers.get("content-type")).toContain("application/problem+json");

@@ -65,7 +65,6 @@ const DeploymentManifestSchema = z
         publicApi: z.literal("/api/v1"),
         health: z.literal("/api/v1/health"),
         openapi: z.literal("/api/v1/openapi.json"),
-        identityCallback: z.literal("/api/auth/callback/github"),
       })
       .strict(),
     runtime: z
@@ -86,7 +85,6 @@ const DeploymentManifestSchema = z
         command: z.literal("npm run migrate"),
         stageVariable: z.literal("APP_BUILDER_DELIVERY_STAGE"),
         runWhen: z.literal("PREVIEW"),
-        productionExecutor: z.literal("trusted-release"),
       })
       .strict(),
   })
@@ -119,75 +117,6 @@ if (
   throw new Error("The Vercel deployment command must use the stage-aware runner.");
 }
 
-const releaseMigration = z
-  .object({
-    schemaVersion: z.literal(1),
-    executor: z.literal("trusted-release"),
-    database: z
-      .object({
-        provider: z.literal("neon"),
-        credential: z.literal("DATABASE_URL"),
-        migrationCommand: z.literal("npm run migrate"),
-      })
-      .strict(),
-    cutover: z
-      .object({
-        requiresMigrationReceipt: z.literal(true),
-        receipt: z
-          .object({
-            exactCommit: z.literal(true),
-            migrationChecksums: z.literal(true),
-            completedAt: z.literal(true),
-          })
-          .strict(),
-        receiptCommand: z.literal(
-          "npm run release:emit-migration-receipt -- --commit <git-commit> --output <receipt-path>",
-        ),
-        verificationCommand: z.literal(
-          "npm run release:verify-cutover -- --commit <git-commit> --receipt <receipt-path>",
-        ),
-        productionPromotion: z
-          .object({
-            invokedBy: z.literal("trusted-production-promotion-controller"),
-            commands: z.tuple([
-              z.literal("npm run migrate"),
-              z.literal(
-                "npm run release:emit-migration-receipt -- --commit <git-commit> --output <receipt-path>",
-              ),
-              z.literal(
-                "npm run release:verify-cutover -- --commit <git-commit> --receipt <receipt-path>",
-              ),
-              z.literal("npm run deploy:vercel"),
-            ]),
-          })
-          .strict(),
-      })
-      .strict(),
-  })
-  .strict()
-  .parse(JSON.parse(await readFile("deployment/release-migration.v1.json", "utf8")));
-
-if (
-  packageJson.scripts["release:emit-migration-receipt"] !==
-  "node --import tsx scripts/emit-migration-receipt.ts"
-) {
-  throw new Error("Trusted production promotion must expose receipt emission.");
-}
-if (
-  packageJson.scripts["release:verify-cutover"] !==
-  "node --import tsx scripts/verify-release-cutover.ts"
-) {
-  throw new Error("Trusted production promotion must expose the cutover verifier.");
-}
-if (
-  packageJson.scripts["deploy:vercel"].includes("release:verify-cutover") ||
-  manifest.environment.some(({ name }) => name === "RELEASE_MIGRATION_RECEIPT")
-) {
-  throw new Error(
-    "Cutover receipt verification belongs to trusted release automation, not the Vercel build.",
-  );
-}
-
 const vercelConfig = z
   .object({ buildCommand: z.literal(manifest.build.buildCommand) })
   .passthrough()
@@ -200,9 +129,19 @@ const variableNames = manifest.environment.map(({ name }) => name);
 if (new Set(variableNames).size !== variableNames.length) {
   throw new Error("Deployment manifest environment names must be unique.");
 }
+for (const unrequestedProviderVariable of [
+  "GITHUB_APP_CLIENT_ID",
+  "GITHUB_APP_CLIENT_SECRET",
+]) {
+  if (variableNames.includes(unrequestedProviderVariable)) {
+    throw new Error(
+      `Deployment manifest must not configure unrequested social provider variable ${unrequestedProviderVariable}.`,
+    );
+  }
+}
 
 const databaseVariable = manifest.environment.find(
-  ({ name }) => name === releaseMigration.database.credential,
+  ({ name }) => name === "DATABASE_URL",
 );
 if (
   databaseVariable?.required !== true ||

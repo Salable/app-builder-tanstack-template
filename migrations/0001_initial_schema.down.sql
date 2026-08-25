@@ -1,0 +1,11 @@
+DROP TABLE foundation_seat_assignments;
+DROP TABLE foundation_seat_reservations;
+DROP TABLE foundation_organization_invitations;
+DROP TABLE foundation_seat_ledgers;
+DROP TABLE projects;
+DROP TABLE organization_memberships;
+DROP TABLE organizations;
+DROP TABLE "verification";
+DROP TABLE "account";
+DROP TABLE "session";
+DROP TABLE "user";

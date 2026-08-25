@@ -50,15 +50,6 @@ export function createBetterAuthRuntime(
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
     },
-    socialProviders:
-      config.github === undefined
-        ? {}
-        : {
-            github: {
-              clientId: config.github.clientId,
-              clientSecret: config.github.clientSecret,
-            },
-          },
     telemetry: { enabled: false },
     trustedOrigins: [new URL(config.baseUrl).origin],
   });

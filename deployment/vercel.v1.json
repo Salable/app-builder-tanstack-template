@@ -92,28 +92,13 @@
       "secret": false,
       "source": "user",
       "phase": "runtime"
-    },
-    {
-      "name": "GITHUB_APP_CLIENT_ID",
-      "required": false,
-      "secret": false,
-      "source": "user",
-      "phase": "runtime"
-    },
-    {
-      "name": "GITHUB_APP_CLIENT_SECRET",
-      "required": false,
-      "secret": true,
-      "source": "user",
-      "phase": "runtime"
     }
   ],
   "routes": {
     "application": "/",
     "publicApi": "/api/v1",
     "health": "/api/v1/health",
-    "openapi": "/api/v1/openapi.json",
-    "identityCallback": "/api/auth/callback/github"
+    "openapi": "/api/v1/openapi.json"
   },
   "runtime": {
     "node": "24.x",
@@ -140,7 +125,6 @@
   "previewMigration": {
     "command": "npm run migrate",
     "stageVariable": "APP_BUILDER_DELIVERY_STAGE",
-    "runWhen": "PREVIEW",
-    "productionExecutor": "trusted-release"
+    "runWhen": "PREVIEW"
   }
 }

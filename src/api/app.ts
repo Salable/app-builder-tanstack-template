@@ -65,11 +65,11 @@ publicApi.use("/api/v1/*", async (context, next) => {
 
   const requestedVersion = context.req.header(API_VERSION_HEADER);
   if (
-    requestedVersion !== undefined &&
+    requestedVersion === undefined ||
     !ApiVersionHeaderSchema.safeParse(requestedVersion.trim()).success
   ) {
     return problem(context, {
-      detail: `API-Version must be 1; received ${JSON.stringify(requestedVersion)}.`,
+      detail: `API-Version must be exactly 1; received ${JSON.stringify(requestedVersion ?? null)}.`,
       status: 400,
       title: "Unsupported API version",
       type: `${PROBLEM_BASE}/unsupported-api-version`,
@@ -366,8 +366,7 @@ publicApi.onError((error, context) => {
 
 const openApiConfig = {
   info: {
-    description:
-      "Public, backwards-compatible API for an App Builder generated application.",
+    description: "Strict current API for an App Builder generated application.",
     title: "Generated Application API",
     version: "1.0.0",
   },

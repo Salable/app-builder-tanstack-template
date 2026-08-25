@@ -101,62 +101,6 @@ describe("deployment environment contract", () => {
     });
   });
 
-  it("declares trusted promotion in fail-closed production order", () => {
-    const release = JSON.parse(
-      readFileSync("deployment/release-migration.v1.json", "utf8"),
-    ) as {
-      cutover: {
-        productionPromotion: { commands: string[]; invokedBy: string };
-      };
-    };
-    expect(release.cutover.productionPromotion.commands).toEqual([
-      "npm run migrate",
-      "npm run release:emit-migration-receipt -- --commit <git-commit> --output <receipt-path>",
-      "npm run release:verify-cutover -- --commit <git-commit> --receipt <receipt-path>",
-      "npm run deploy:vercel",
-    ]);
-    expect(release.cutover.productionPromotion.invokedBy).toBe(
-      "trusted-production-promotion-controller",
-    );
-  });
-
-  it("emits and verifies a trusted receipt before deployment", () => {
-    const receiptPath = join(
-      mkdtempSync(join(tmpdir(), "trusted-promotion-")),
-      "receipt.json",
-    );
-    const commit = "a".repeat(40);
-    const emit = spawnSync(
-      process.execPath,
-      [
-        "--import",
-        "tsx",
-        "scripts/emit-migration-receipt.ts",
-        "--commit",
-        commit,
-        "--output",
-        receiptPath,
-      ],
-      { encoding: "utf8" },
-    );
-    expect(emit.status, emit.stderr).toBe(0);
-
-    const verify = spawnSync(
-      process.execPath,
-      [
-        "--import",
-        "tsx",
-        "scripts/verify-release-cutover.ts",
-        "--commit",
-        commit,
-        "--receipt",
-        receiptPath,
-      ],
-      { encoding: "utf8" },
-    );
-    expect(verify.status, verify.stderr).toBe(0);
-  });
-
   it("can enable protected insights using only a declared production variable", async () => {
     const manifest = JSON.parse(readFileSync("deployment/vercel.v1.json", "utf8")) as {
       environment: Array<{ name: string; required: boolean }>;

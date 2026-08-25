@@ -16,13 +16,6 @@ export function readBetterAuthConfig(environment: RuntimeEnvironment) {
   const enableTestPasswordAuth =
     environment.NODE_ENV === "test" &&
     environment.APP_BUILDER_TEST_AUTH === TEST_PASSWORD_AUTH_FLAG;
-  const clientId = optional(environment.GITHUB_APP_CLIENT_ID);
-  const clientSecret = optional(environment.GITHUB_APP_CLIENT_SECRET);
-  if ((clientId === undefined) !== (clientSecret === undefined)) {
-    throw new IdentityConfigurationError(
-      "GitHub identity requires both client ID and client secret.",
-    );
-  }
   let parsedBaseUrl: URL;
   try {
     parsedBaseUrl = new URL(baseUrl);
@@ -37,10 +30,6 @@ export function readBetterAuthConfig(environment: RuntimeEnvironment) {
     baseUrl: parsedBaseUrl.toString().replace(/\/$/, ""),
     databaseUrl,
     enableTestPasswordAuth,
-    github:
-      clientId === undefined || clientSecret === undefined
-        ? undefined
-        : { clientId, clientSecret },
     secret,
     secureCookies: parsedBaseUrl.protocol === "https:",
   };
