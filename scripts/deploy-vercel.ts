@@ -1,7 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { deploymentScripts } from "./deployment-plan";
+import { deploymentApplicationOrigin, deploymentScripts } from "./deployment-plan";
 
-for (const script of deploymentScripts(process.env.APP_BUILDER_DELIVERY_STAGE)) {
+const stage = process.env.APP_BUILDER_DELIVERY_STAGE;
+const scripts = deploymentScripts(stage);
+deploymentApplicationOrigin(stage);
+
+for (const script of scripts) {
   const result = spawnSync("npm", ["run", script], {
     env: process.env,
     stdio: "inherit",

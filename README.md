@@ -78,9 +78,22 @@ HTTP-only cookies. Configure the self-hosted mode with:
 
 ```sh
 DATABASE_URL=postgresql://...
-BETTER_AUTH_URL=http://localhost:3000
 BETTER_AUTH_SECRET=at-least-32-random-characters
 ```
+
+The server-only `src/runtime/application-origin.ts` resolver supplies Better
+Auth and every other absolute application URL. It uses the loopback `HOST` and
+`PORT` in local development, the exact `VERCEL_URL` in Preview, and
+`VERCEL_PROJECT_PRODUCTION_URL` in Production. Vercel's **Automatically expose
+System Environment Variables** setting must remain enabled. Do not add a
+mirrored `APP_BASE_URL` or `BETTER_AUTH_URL`, and never derive this origin from
+request headers.
+
+That setting exposes Vercel's complete documented system-variable set to the
+project at each variable's stated build/runtime phase. Server and build code can
+use those names directly without App Builder aliases. This does not make every
+value browser configuration; client exposure remains an explicit, public-data
+decision.
 
 The starter contains no third-party or social sign-in provider. GitHub, Google,
 Microsoft, and other external identity providers are added only when the user
@@ -165,9 +178,9 @@ receipt script, deployment-promotion command, or production migration fallback.
 The Deploy Button requires the Vercel Marketplace Neon product so the deployed
 runtime receives its scoped `DATABASE_URL`; do not paste a Neon API key into App
 Builder. Before the first deployment, the required App Builder Vercel integration
-configures `BETTER_AUTH_URL` as Vercel's production-URL reference, supplies
-`BETTER_AUTH_SECRET`, and installs the environment-scoped App Builder runtime
-values. Those Better Auth values do not override a verified Neon Auth selection
-or authorize a sign-in method. To enable protected insights, set
+supplies `BETTER_AUTH_SECRET` and the environment-scoped App Builder runtime
+values. Application origins come directly from Vercel's exposed system variables,
+not integration-owned aliases. The Better Auth secret does not override a verified
+Neon Auth selection or authorize a sign-in method. To enable protected insights, set
 the optional `APP_BUILDER_ENTITLED_ORGANIZATION_IDS` variable to a comma-separated
 list of organization UUIDs; omission grants that capability to no organization.

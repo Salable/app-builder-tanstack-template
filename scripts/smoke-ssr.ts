@@ -13,7 +13,6 @@ const server = spawn(process.execPath, [".output/server/index.mjs"], {
     HOST: host,
     PORT: port,
     DATABASE_URL: undefined,
-    BETTER_AUTH_URL: undefined,
     BETTER_AUTH_SECRET: undefined,
     NODE_PG_FORCE_NATIVE: undefined,
   },

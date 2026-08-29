@@ -61,6 +61,37 @@ describe("deployment environment contract", () => {
     );
   });
 
+  it("derives application URLs from trusted Vercel system variables", () => {
+    const manifest = JSON.parse(readFileSync("deployment/vercel.v1.json", "utf8")) as {
+      applicationOrigin: Record<string, unknown>;
+      environment: Array<{ name: string }>;
+    };
+    const agentGuidance = readFileSync("AGENTS.md", "utf8");
+    const deploymentRunner = readFileSync("scripts/deploy-vercel.ts", "utf8");
+
+    expect(manifest.applicationOrigin).toEqual({
+      resolver: "src/runtime/application-origin.ts#resolveApplicationOrigin",
+      systemVariablesMustBeExposed: true,
+      validateBeforeBuild: true,
+      previewSystemVariable: "VERCEL_URL",
+      productionSystemVariable: "VERCEL_PROJECT_PRODUCTION_URL",
+      requestHeaderFallback: false,
+    });
+    expect(manifest.environment.map(({ name }) => name)).not.toContain("APP_BASE_URL");
+    expect(manifest.environment.map(({ name }) => name)).not.toContain(
+      "BETTER_AUTH_URL",
+    );
+    expect(agentGuidance).toContain("resolveApplicationOrigin");
+    expect(agentGuidance).toContain("VERCEL_URL");
+    expect(agentGuidance).toContain("VERCEL_PROJECT_PRODUCTION_URL");
+    expect(agentGuidance).toContain("complete Vercel system-variable set");
+    expect(agentGuidance).toMatch(/do not ask App\s+Builder to copy or rename them/);
+    expect(agentGuidance).toContain("not automatically browser configuration");
+    expect(agentGuidance).toContain("Do not add `APP_BASE_URL`, `BETTER_AUTH_URL`");
+    expect(agentGuidance).toContain("Do not derive an origin from `Host`");
+    expect(deploymentRunner).toContain("deploymentApplicationOrigin(stage)");
+  });
+
   it("declares an environment-bound server-only flag evaluation credential", () => {
     const manifest = JSON.parse(readFileSync("deployment/vercel.v1.json", "utf8")) as {
       environment: Array<{

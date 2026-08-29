@@ -3,8 +3,10 @@ import { readBetterAuthConfig } from "./better-auth-config";
 
 const baseEnvironment = {
   BETTER_AUTH_SECRET: "identity-test-secret-with-at-least-32-characters",
-  BETTER_AUTH_URL: "http://127.0.0.1:4312",
   DATABASE_URL: "postgresql://example.invalid/generated_app",
+  HOST: "127.0.0.1",
+  NODE_ENV: "test",
+  PORT: "4312",
 };
 
 describe("Better Auth runtime configuration", () => {
@@ -13,10 +15,14 @@ describe("Better Auth runtime configuration", () => {
       readBetterAuthConfig({
         ...baseEnvironment,
         NODE_ENV: "production",
+        VERCEL: "1",
+        VERCEL_ENV: "production",
+        VERCEL_PROJECT_PRODUCTION_URL: "app.example.test",
       }),
     ).toMatchObject({
+      baseUrl: "https://app.example.test",
       enableTestPasswordAuth: false,
-      secureCookies: false,
+      secureCookies: true,
     });
   });
 
@@ -28,6 +34,7 @@ describe("Better Auth runtime configuration", () => {
         NODE_ENV: "test",
       }),
     ).toMatchObject({
+      baseUrl: "http://127.0.0.1:4312",
       enableTestPasswordAuth: true,
     });
   });
@@ -38,6 +45,9 @@ describe("Better Auth runtime configuration", () => {
         ...baseEnvironment,
         APP_BUILDER_TEST_AUTH: "email-password",
         NODE_ENV: "production",
+        VERCEL: "1",
+        VERCEL_ENV: "production",
+        VERCEL_PROJECT_PRODUCTION_URL: "app.example.test",
       }),
     ).toMatchObject({ enableTestPasswordAuth: false });
   });

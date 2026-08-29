@@ -63,6 +63,9 @@ before(async () => {
       ...process.env,
       APP_BUILDER_DELIVERY_STAGE: "PREVIEW",
       DATABASE_URL: databaseUrl,
+      VERCEL: "1",
+      VERCEL_ENV: "preview",
+      VERCEL_URL: "integration-preview.vercel.app",
     },
   });
   assert.equal(
@@ -89,16 +92,24 @@ before(async () => {
   const deploymentEnvironment = { ...process.env };
   delete deploymentEnvironment.DATABASE_URL;
   deploymentEnvironment.APP_BUILDER_DELIVERY_STAGE = "PRODUCTION";
+  deploymentEnvironment.VERCEL = "1";
+  deploymentEnvironment.VERCEL_ENV = "production";
+  deploymentEnvironment.VERCEL_PROJECT_PRODUCTION_URL =
+    "integration-production.vercel.app";
   const deployment = spawnSync("npm", ["run", "deploy:vercel"], {
     cwd: process.cwd(),
     encoding: "utf8",
     env: deploymentEnvironment,
   });
   assert.equal(deployment.status, 0, deployment.stderr || deployment.stdout);
+  const runtimeBuildEnvironment = { ...deploymentEnvironment };
+  delete runtimeBuildEnvironment.VERCEL;
+  delete runtimeBuildEnvironment.VERCEL_ENV;
+  delete runtimeBuildEnvironment.VERCEL_PROJECT_PRODUCTION_URL;
   const runtimeBuild = spawnSync("npm", ["run", "build"], {
     cwd: process.cwd(),
     encoding: "utf8",
-    env: deploymentEnvironment,
+    env: runtimeBuildEnvironment,
   });
   assert.equal(runtimeBuild.status, 0, runtimeBuild.stderr || runtimeBuild.stdout);
   await database.query(
@@ -208,7 +219,6 @@ before(async () => {
         APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS: entitledOrganizationId,
         APP_ENVIRONMENT_ID: "environment_preview_integration",
         BETTER_AUTH_SECRET: "postgres-integration-secret-with-32-characters",
-        BETTER_AUTH_URL: origin,
         DATABASE_URL: databaseUrl,
         HOST: host,
         NODE_ENV: "test",

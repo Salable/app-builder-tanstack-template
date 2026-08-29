@@ -6,12 +6,7 @@ const EnvironmentVariableSchema = z
     name: z.string().regex(/^[A-Z][A-Z0-9_]*$/),
     required: z.boolean(),
     secret: z.boolean(),
-    source: z.enum([
-      "generated",
-      "user",
-      "vercel-marketplace:neon",
-      "vercel-system-url",
-    ]),
+    source: z.enum(["generated", "user", "vercel-marketplace:neon"]),
     phase: z.enum(["runtime", "build-runtime"]),
   })
   .strict();
@@ -56,6 +51,18 @@ const DeploymentManifestSchema = z
             .strict(),
         ]),
         databaseCredentialOwner: z.literal("vercel-marketplace:neon"),
+      })
+      .strict(),
+    applicationOrigin: z
+      .object({
+        resolver: z.literal(
+          "src/runtime/application-origin.ts#resolveApplicationOrigin",
+        ),
+        systemVariablesMustBeExposed: z.literal(true),
+        validateBeforeBuild: z.literal(true),
+        previewSystemVariable: z.literal("VERCEL_URL"),
+        productionSystemVariable: z.literal("VERCEL_PROJECT_PRODUCTION_URL"),
+        requestHeaderFallback: z.literal(false),
       })
       .strict(),
     environment: z.array(EnvironmentVariableSchema).min(3),
@@ -129,13 +136,15 @@ const variableNames = manifest.environment.map(({ name }) => name);
 if (new Set(variableNames).size !== variableNames.length) {
   throw new Error("Deployment manifest environment names must be unique.");
 }
-for (const unrequestedProviderVariable of [
+for (const forbiddenEnvironmentVariable of [
+  "APP_BASE_URL",
+  "BETTER_AUTH_URL",
   "GITHUB_APP_CLIENT_ID",
   "GITHUB_APP_CLIENT_SECRET",
 ]) {
-  if (variableNames.includes(unrequestedProviderVariable)) {
+  if (variableNames.includes(forbiddenEnvironmentVariable)) {
     throw new Error(
-      `Deployment manifest must not configure unrequested social provider variable ${unrequestedProviderVariable}.`,
+      `Deployment manifest must not configure redundant or unrequested variable ${forbiddenEnvironmentVariable}.`,
     );
   }
 }
@@ -155,7 +164,6 @@ if (
 }
 
 for (const requiredName of [
-  "BETTER_AUTH_URL",
   "BETTER_AUTH_SECRET",
   "APP_ENVIRONMENT_ID",
   "APP_BUILDER_CONTROL_PLANE_URL",

@@ -29,14 +29,15 @@
     ],
     "databaseCredentialOwner": "vercel-marketplace:neon"
   },
+  "applicationOrigin": {
+    "resolver": "src/runtime/application-origin.ts#resolveApplicationOrigin",
+    "systemVariablesMustBeExposed": true,
+    "validateBeforeBuild": true,
+    "previewSystemVariable": "VERCEL_URL",
+    "productionSystemVariable": "VERCEL_PROJECT_PRODUCTION_URL",
+    "requestHeaderFallback": false
+  },
   "environment": [
-    {
-      "name": "BETTER_AUTH_URL",
-      "required": true,
-      "secret": false,
-      "source": "vercel-system-url",
-      "phase": "runtime"
-    },
     {
       "name": "BETTER_AUTH_SECRET",
       "required": true,
