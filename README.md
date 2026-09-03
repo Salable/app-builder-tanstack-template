@@ -95,13 +95,26 @@ use those names directly without App Builder aliases. This does not make every
 value browser configuration; client exposure remains an explicit, public-data
 decision.
 
-The starter contains no third-party or social sign-in provider. GitHub, Google,
-Microsoft, and other external identity providers are added only when the user
-explicitly requests the named provider. It also contains no email-delivery
-provider and does not impose email verification, password-reset email, magic
-links, or email OTP until the user specifies how those flows should work.
-Authentication only establishes identity: protected application routes
-independently verify organization membership, resource ownership, and
+In `NEON_AUTH` mode, Vercel's native Neon product has already provisioned Managed
+Neon Auth and injected its application URLs. App Builder and its agents never ask
+for a Vercel or Neon API key. Neon's Managed Better Auth service natively supports
+email/password registration and sessions. When accepted requirements include
+email verification or Magic Link, configure that flow through Neon Auth. Neon owns
+those authentication emails and provides shared development delivery. Agents
+implement and test the repository-side SDK/UI behavior and record the required
+Neon setting without requesting credentials or claiming to mutate Neon. Custom
+SMTP is configured in Neon before a production release and does not block a brief,
+plan, or development. Do not add an application email SDK, webhook, or second
+delivery service unless the requirements explicitly ask for a separate custom
+email flow.
+
+Self-hosted Better Auth does not inherit Neon's managed email delivery, so its
+email flows and delivery integration remain explicit product requirements. The
+starter contains no third-party or social sign-in provider in either mode. GitHub,
+Google, Microsoft, and other external identity providers are added only when the
+user explicitly requests the named provider. Authentication only establishes
+identity: protected application routes independently verify organization
+membership, authenticated `user.id`, resource ownership, tenant scope, and
 entitlement.
 
 The integration suite enables Better Auth email/password endpoints only when

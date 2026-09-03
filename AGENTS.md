@@ -39,10 +39,22 @@ product owns generated-application database credentials. Agents never request or
 receive Vercel, Neon, Preview-database, Production-database, production-merge, or
 feature-flag management credentials.
 
-The recorded Neon Auth or self-hosted Better Auth choice is authoritative. Never
-add a social sign-in provider unless the accepted requirements explicitly name it,
-and do not invent an email provider or verification flow. Salable entitlements are
-the source of truth for access; webhooks are optional and user-requested only.
+The recorded Neon Auth or self-hosted Better Auth choice is authoritative. In
+`NEON_AUTH` mode, Vercel and Neon have already provisioned the managed service and
+injected its URLs; never request their API keys. Neon's Managed Better Auth service
+natively supports email/password registration and sessions. When accepted
+requirements ask for email verification or Magic Link, configure the flow through
+Neon Auth. Implement and test the repository-side SDK/UI behavior and record the
+required Neon setting; agents do not request credentials or claim to mutate Neon.
+Neon owns those authentication emails and shared development delivery; custom SMTP
+in Neon is a production-release prerequisite, not a planning blocker. Do not add
+an application email SDK or webhook unless the requirements explicitly ask for a
+separate custom email flow. Preserve the self-hosted Better Auth path when that
+mode is recorded. Never add a social sign-in provider unless the accepted
+requirements explicitly name it. Authentication establishes identity only, so
+scope tenant data and resources to the authenticated `user.id` or an app-owned
+membership. Salable entitlements are the source of truth for access; webhooks are
+optional and user-requested only.
 
 Applied migration files are immutable. Add a new paired forward/rollback migration
 for schema changes and prove clean installation plus upgrade from the prior head.

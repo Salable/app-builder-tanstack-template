@@ -92,6 +92,32 @@ describe("deployment environment contract", () => {
     expect(deploymentRunner).toContain("deploymentApplicationOrigin(stage)");
   });
 
+  it("records managed Neon Auth as a ready application capability", () => {
+    const agentGuidance = readFileSync("AGENTS.md", "utf8");
+    const readme = readFileSync("README.md", "utf8");
+
+    for (const guidance of [agentGuidance, readme]) {
+      const normalizedGuidance = guidance.replace(/\s+/g, " ");
+
+      expect(normalizedGuidance).toMatch(
+        /Vercel[^.]*Neon[^.]*provision(?:s|ed)?[^.]*(?:managed service|managed Neon Auth)/i,
+      );
+      expect(normalizedGuidance).toMatch(/email\/password registration and sessions/i);
+      expect(normalizedGuidance).toMatch(
+        /email verification[^.]*Magic Link[^.]*Neon Auth/i,
+      );
+      expect(normalizedGuidance).toMatch(/Neon owns[^.]*auth(?:entication)? emails/i);
+      expect(normalizedGuidance).toMatch(/custom SMTP[^.]*Neon[^.]*production/i);
+      expect(normalizedGuidance).toMatch(
+        /(?:not a planning blocker|does not block a brief, plan, or development)/i,
+      );
+      expect(normalizedGuidance).toMatch(/never (?:request|ask for)[^.]*API keys?/i);
+      expect(normalizedGuidance).not.toContain(
+        "until the user specifies how those flows should work",
+      );
+    }
+  });
+
   it("declares an environment-bound server-only flag evaluation credential", () => {
     const manifest = JSON.parse(readFileSync("deployment/vercel.v1.json", "utf8")) as {
       environment: Array<{
