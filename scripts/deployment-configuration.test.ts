@@ -52,6 +52,9 @@ describe("deployment environment contract", () => {
     expect(packageJson.scripts.build).toBe(
       "npm run generate && NODE_ENV=production vite build",
     );
+    expect(packageJson.scripts["check:build"]).toBe(
+      "npm run build && npm run test:ssr && npm run build:vercel && npm run check:deployment:built",
+    );
     expect(manifest.environment).toContainEqual(
       expect.objectContaining({
         name: "APP_BUILDER_DELIVERY_STAGE",

@@ -9,7 +9,7 @@
     "build:vercel": "NITRO_PRESET=vercel npm run build",
     "deploy:vercel": "node --import tsx scripts/deploy-vercel.ts",
     "check": "npm run check:quality && npm run test:unit && npm run test:integration && npm run check:build",
-    "check:build": "npm run build && npm run check:deployment:built && npm run test:ssr",
+    "check:build": "npm run build && npm run test:ssr && npm run build:vercel && npm run check:deployment:built",
     "check:quality": "npm run format:check && npm run lint && npm run typecheck && npm run check:feature-flags && npm run check:deployment && npm run generate:check",
     "check:deployment": "node --import tsx scripts/check-deployment-manifest.ts",
     "check:deployment:built": "node --import tsx scripts/check-deployment-manifest.ts --built",
