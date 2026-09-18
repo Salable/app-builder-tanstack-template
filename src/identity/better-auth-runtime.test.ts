@@ -1,54 +1,48 @@
 import { describe, expect, it } from "vitest";
 import { readBetterAuthConfig } from "./better-auth-config";
+import { createBetterAuthRuntime } from "./better-auth-runtime";
 
 const baseEnvironment = {
   BETTER_AUTH_SECRET: "identity-test-secret-with-at-least-32-characters",
   DATABASE_URL: "postgresql://example.invalid/generated_app",
   HOST: "127.0.0.1",
-  NODE_ENV: "test",
   PORT: "4312",
+  NODE_ENV: "test",
 };
 
 describe("Better Auth runtime configuration", () => {
-  it("accepts the self-hosted production identity boundary without a sign-in provider", () => {
-    expect(
-      readBetterAuthConfig({
-        ...baseEnvironment,
-        NODE_ENV: "production",
-        VERCEL: "1",
-        VERCEL_ENV: "production",
-        VERCEL_PROJECT_PRODUCTION_URL: "app.example.test",
-      }),
-    ).toMatchObject({
+  it("provides standard email/password accounts in production without social providers", async () => {
+    const config = readBetterAuthConfig({
+      ...baseEnvironment,
+      NODE_ENV: "production",
+      VERCEL: "1",
+      VERCEL_ENV: "production",
+      VERCEL_PROJECT_PRODUCTION_URL: "app.example.test",
+    });
+    expect(config).toMatchObject({
       baseUrl: "https://app.example.test",
-      enableTestPasswordAuth: false,
       secureCookies: true,
     });
+    const runtime = createBetterAuthRuntime(config);
+    try {
+      expect(runtime.auth.options.emailAndPassword).toEqual({
+        enabled: true,
+        disableSignUp: false,
+        requireEmailVerification: false,
+      });
+      expect(runtime.auth.options).not.toHaveProperty("socialProviders");
+      expect(runtime.auth.options.session?.cookieCache?.enabled).toBe(false);
+    } finally {
+      await runtime.close();
+    }
   });
-
-  it("permits deterministic password auth only in an explicit test process", () => {
-    expect(
-      readBetterAuthConfig({
-        ...baseEnvironment,
-        APP_BUILDER_TEST_AUTH: "email-password",
-        NODE_ENV: "test",
-      }),
-    ).toMatchObject({
+  it("uses the shared local origin and rejects missing identity credentials", () => {
+    expect(readBetterAuthConfig(baseEnvironment)).toMatchObject({
       baseUrl: "http://127.0.0.1:4312",
-      enableTestPasswordAuth: true,
+      secureCookies: false,
     });
-  });
-
-  it("does not enable the test sign-in method in production", () => {
-    expect(
-      readBetterAuthConfig({
-        ...baseEnvironment,
-        APP_BUILDER_TEST_AUTH: "email-password",
-        NODE_ENV: "production",
-        VERCEL: "1",
-        VERCEL_ENV: "production",
-        VERCEL_PROJECT_PRODUCTION_URL: "app.example.test",
-      }),
-    ).toMatchObject({ enableTestPasswordAuth: false });
+    expect(() =>
+      readBetterAuthConfig({ ...baseEnvironment, BETTER_AUTH_SECRET: undefined }),
+    ).toThrow("BETTER_AUTH_SECRET");
   });
 });

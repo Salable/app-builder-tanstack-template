@@ -68,18 +68,35 @@ standalone template root.
 
 ## Identity and authorization
 
-The Vercel-installed Neon authentication choice is authoritative for generated
-application work. If Neon Auth was enabled, planning and delivery replace the
-starter's self-hosted adapter with the provisioned Neon Auth service; they never
-run both. If Neon Auth was disabled, Better Auth 1.6.24 remains mounted at
-`/api/auth` behind the application-owned identity contract. Its PostgreSQL
-sessions disable cookie caching so revocation is authoritative and use secure
-HTTP-only cookies. Configure the self-hosted mode with:
+The starter includes `/auth/sign-in`, `/auth/sign-up`, and `/protected` account
+views, with shared pending/error feedback and sign-out. Email/password accounts
+work through one same-origin `/api/auth` boundary in either verified mode.
+
+The Vercel-installed Neon authentication choice is authoritative. When both
+`NEON_AUTH_BASE_URL` and `VITE_NEON_AUTH_URL` are present, the server uses the
+pinned Neon Auth SDK and `NEON_AUTH_COOKIE_SECRET`. The URLs must name the same
+managed service. Partial or inconsistent configuration is rejected; it never
+starts a second identity provider. These values are supplied by the native Neon
+integration and the trusted App Builder runtime setup.
+
+When neither Neon URL is present, the self-hosted Better Auth adapter provides
+email/password accounts against PostgreSQL. Configure that mode with:
 
 ```sh
 DATABASE_URL=postgresql://...
 BETTER_AUTH_SECRET=at-least-32-random-characters
 ```
+
+The managed adapter bridges HTTP-only session cookies onto the application
+origin, forwards only Neon cookies upstream, and uses the server toolkit for
+request-bound session reads. Both browser session reads and protected server
+routes bypass the SDK's session-cookie cache so sign-out and revocation take
+effect immediately. Auth responses are private and non-cacheable; decoded
+upstream responses never retain compression headers. The browser client is
+created once, and server authentication creates no browser broadcast subscribers.
+Authentication reads do not provision organizations, memberships, or product
+records. Add those app-owned records inside the relevant feature transaction;
+a managed Neon user does not imply a row in the self-hosted auth tables.
 
 The server-only `src/runtime/application-origin.ts` resolver supplies Better
 Auth and every other absolute application URL. It uses the loopback `HOST` and
@@ -117,10 +134,12 @@ identity: protected application routes independently verify organization
 membership, authenticated `user.id`, resource ownership, tenant scope, and
 entitlement.
 
-The integration suite enables Better Auth email/password endpoints only when
-both `NODE_ENV=test` and `APP_BUILDER_TEST_AUTH=email-password` are set in its
-isolated server process. Production configuration cannot activate that
-fixture.
+The integration suite exercises self-hosted database sessions and the managed
+cookie flow through the built application with a local Neon-protocol service and
+a standards-based cookie jar. It covers registration, sign-in, protected SSR,
+refresh, separate users, compressed provider responses, cookie filtering,
+sign-out, and revoked-session denial. It requires no hosted credentials and does
+not claim to verify a live Neon project's configuration.
 
 ## App Builder-owned feature flags
 

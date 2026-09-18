@@ -39,12 +39,8 @@ function createIdentityProvider(): IdentityProvider {
   return {
     async authenticate(headers) {
       if (!headers.has("cookie")) return null;
-      const { BetterAuthIdentityProvider } =
-        await import("./better-auth-identity-provider");
-      const { getBetterAuthRuntime } = await import("./better-auth-runtime");
-      return new BetterAuthIdentityProvider(
-        () => getBetterAuthRuntime().auth,
-      ).authenticate(headers);
+      const { getAuthenticationRuntime } = await import("./auth-runtime");
+      return getAuthenticationRuntime().identity.authenticate(headers);
     },
   };
 }

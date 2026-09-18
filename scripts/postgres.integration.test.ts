@@ -215,7 +215,6 @@ before(async () => {
         ...process.env,
         APP_BUILDER_TEST_FAULT_AFTER_INSERT_NAME: "rollback proof",
         APP_BUILDER_TEST_NETWORK_DENY_PROOF: "1",
-        APP_BUILDER_TEST_AUTH: "email-password",
         APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS: entitledOrganizationId,
         APP_ENVIRONMENT_ID: "environment_preview_integration",
         BETTER_AUTH_SECRET: "postgres-integration-secret-with-32-characters",

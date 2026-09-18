@@ -1,5 +1,6 @@
 import { Button } from "@base-ui/react/button";
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import { authClient } from "../identity/auth-client";
 import { getProtectedRouteIdentity } from "../identity/protected-route.functions";
 
@@ -11,6 +12,25 @@ export const Route = createFileRoute("/protected")({
 function ProtectedRoute() {
   const result = Route.useLoaderData();
   const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  async function signOut() {
+    setSigningOut(true);
+    setSignOutError(null);
+    try {
+      const result = await authClient.signOut();
+      if (result.error) {
+        setSignOutError("Sign-out failed. Please try again.");
+        return;
+      }
+      await router.invalidate();
+    } catch {
+      setSignOutError("Sign-out failed. Please try again.");
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-5 py-10 text-slate-950">
@@ -30,21 +50,30 @@ function ProtectedRoute() {
             </p>
             <Button
               className="mt-5 rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white"
+              disabled={signingOut}
               onClick={() => {
-                void authClient.signOut().then(() => router.invalidate());
+                void signOut();
               }}
               type="button"
             >
-              Sign out
+              {signingOut ? "Signing out…" : "Sign out"}
             </Button>
+            {signOutError && (
+              <p role="alert" className="mt-3 text-red-700">
+                {signOutError}
+              </p>
+            )}
           </section>
         ) : result.status === "unauthenticated" ? (
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold">Authentication required</h2>
-            <p className="mt-3 text-slate-700">
-              Protected account details are resolved on the server from a
-              database-backed session.
-            </p>
+            <p className="mt-3 text-slate-700">Sign in to view your account.</p>
+            <Link
+              className="mt-5 inline-block font-semibold text-violet-700 underline"
+              to="/auth/sign-in"
+            >
+              Sign in
+            </Link>
           </section>
         ) : (
           <section

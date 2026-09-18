@@ -37,13 +37,11 @@ export function createBetterAuthRuntime(
     basePath: "/api/auth",
     baseURL: config.baseUrl,
     database: pool,
-    emailAndPassword: config.enableTestPasswordAuth
-      ? {
-          disableSignUp: false,
-          enabled: true,
-          requireEmailVerification: false,
-        }
-      : undefined,
+    emailAndPassword: {
+      disableSignUp: false,
+      enabled: true,
+      requireEmailVerification: false,
+    },
     secret: config.secret,
     session: {
       cookieCache: { enabled: false },

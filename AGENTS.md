@@ -39,6 +39,14 @@ product owns generated-application database credentials. Agents never request or
 receive Vercel, Neon, Preview-database, Production-database, production-merge, or
 feature-flag management credentials.
 
+The standard email/password views and both authentication adapters are already
+implemented. Reuse `src/identity/auth-runtime.ts`, `/auth/sign-in`,
+`/auth/sign-up`, and the protected server identity boundary; adapt the product's
+presentation instead of replacing the cookie/session integration. Keep the
+managed HTTP integration tests green. Never instantiate a browser auth client
+per server request, forward unrelated cookies, cache authoritative session
+reads, or copy a compressed response header onto a decoded body.
+
 The recorded Neon Auth or self-hosted Better Auth choice is authoritative. In
 `NEON_AUTH` mode, Vercel and Neon have already provisioned the managed service and
 injected its URLs; never request their API keys. Neon's Managed Better Auth service

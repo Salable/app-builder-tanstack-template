@@ -4,7 +4,6 @@ import {
   resolveApplicationOrigin,
 } from "../runtime/application-origin";
 
-const TEST_PASSWORD_AUTH_FLAG = "email-password";
 type RuntimeEnvironment = Record<string, string | undefined>;
 
 export function readBetterAuthConfig(environment: RuntimeEnvironment) {
@@ -16,9 +15,6 @@ export function readBetterAuthConfig(environment: RuntimeEnvironment) {
     );
   }
 
-  const enableTestPasswordAuth =
-    environment.NODE_ENV === "test" &&
-    environment.APP_BUILDER_TEST_AUTH === TEST_PASSWORD_AUTH_FLAG;
   let baseUrl: string;
   try {
     baseUrl = resolveApplicationOrigin(environment);
@@ -32,7 +28,6 @@ export function readBetterAuthConfig(environment: RuntimeEnvironment) {
   return {
     baseUrl,
     databaseUrl,
-    enableTestPasswordAuth,
     secret,
     secureCookies: baseUrl.startsWith("https://"),
   };

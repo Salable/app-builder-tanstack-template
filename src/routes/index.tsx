@@ -1,5 +1,5 @@
 import { Button } from "@base-ui/react/button";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { create } from "zustand";
 import { useGetApiV1Health } from "../api/generated/client";
@@ -81,6 +81,13 @@ function Home() {
             authentication, testing, and deployment seams ready for your product. Return
             to App Builder to define what you want to build and start the work.
           </p>
+          <nav
+            aria-label="Account"
+            className="flex gap-5 font-semibold text-violet-700"
+          >
+            <Link to="/auth/sign-in">Sign in</Link>
+            <Link to="/auth/sign-up">Create an account</Link>
+          </nav>
         </header>
 
         <section

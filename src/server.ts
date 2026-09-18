@@ -1,6 +1,6 @@
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { publicApi } from "./api/app";
-import { getBetterAuthRuntime } from "./identity/better-auth-runtime";
+import { getAuthenticationRuntime } from "./identity/auth-runtime";
 import { IdentityConfigurationError } from "./identity/identity-provider";
 
 export default createServerEntry({
@@ -11,7 +11,7 @@ export default createServerEntry({
     }
     if (pathname === "/api/auth" || pathname.startsWith("/api/auth/")) {
       try {
-        return await getBetterAuthRuntime().auth.handler(request);
+        return await getAuthenticationRuntime().handler(request);
       } catch (error) {
         if (error instanceof IdentityConfigurationError) {
           return Response.json(

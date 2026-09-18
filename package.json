@@ -27,7 +27,7 @@
     "start": "node .output/server/index.mjs",
     "test": "npm run test:unit",
     "test:unit": "vitest run",
-    "test:integration": "node --import tsx scripts/run-postgres-integration.ts",
+    "test:integration": "node --import tsx scripts/run-postgres-integration.ts && node --import tsx --test scripts/neon-auth.integration.test.ts",
     "test:ssr": "node --import tsx scripts/smoke-ssr.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -39,6 +39,7 @@
     "@base-ui/react": "1.6.0",
     "@hono/zod-openapi": "1.5.1",
     "@hookform/resolvers": "5.4.0",
+    "@neondatabase/auth": "0.5.0-beta",
     "@tanstack/react-query": "5.101.4",
     "@tanstack/react-router": "1.170.18",
     "@tanstack/react-start": "1.168.34",
@@ -53,8 +54,8 @@
     "zustand": "5.0.14"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.3.3",
     "@eslint/js": "9.39.5",
+    "@tailwindcss/vite": "4.3.3",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "16.3.2",
     "@types/node": "24.13.3",
@@ -68,6 +69,7 @@
     "orval": "8.24.0",
     "prettier": "3.9.6",
     "tailwindcss": "4.3.3",
+    "tough-cookie": "6.0.2",
     "tsx": "4.23.1",
     "typescript": "6.0.3",
     "typescript-eslint": "8.65.0",
