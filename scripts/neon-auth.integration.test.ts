@@ -1,33 +1,19 @@
 import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer } from "node:http";
 import { after, before, describe, it } from "node:test";
-import { gzipSync } from "node:zlib";
 import { CookieJar } from "tough-cookie";
+import { startNeonAuthTestService } from "./neon-auth-test-service";
 
-type User = { id: string; email: string; name: string; password: string };
-const users = new Map<string, User>();
-const sessions = new Map<string, User>();
-const receivedCookies: string[] = [];
-let sequence = 0;
+let provider: Awaited<ReturnType<typeof startNeonAuthTestService>>;
 let application: ChildProcess;
 let origin: string;
 let providerOrigin: string;
 const output: string[] = [];
-const provider = createServer((request, response) => {
-  void handleProvider(request, response).catch(() => {
-    response.writeHead(500);
-    response.end();
-  });
-});
-
 before(async () => {
-  provider.listen(0, "127.0.0.1");
-  await once(provider, "listening");
-  const address = provider.address();
-  assert.ok(address && typeof address === "object");
-  providerOrigin = `http://localhost:${address.port}`;
+  provider = await startNeonAuthTestService();
+  providerOrigin = provider.origin;
   const probe = createServer();
   probe.listen(0, "127.0.0.1");
   await once(probe, "listening");
@@ -72,8 +58,7 @@ after(async () => {
     application.kill("SIGTERM");
     await exited;
   }
-  provider.closeAllConnections();
-  await new Promise<void>((resolve) => provider.close(() => resolve()));
+  await provider?.close();
 });
 
 describe("managed Neon authentication through the built application", () => {
@@ -95,7 +80,7 @@ describe("managed Neon authentication through the built application", () => {
     });
     assert.equal(response.status, 200, output.join(""));
     assert.equal(
-      ((await response.json()) as { user: User }).user.name,
+      ((await response.json()) as { user: { name: string } }).user.name,
       "Alice Example",
     );
     assert.equal(response.headers.get("content-encoding"), null);
@@ -115,7 +100,7 @@ describe("managed Neon authentication through the built application", () => {
       assert.match(await page.text(), /Alice Example/);
     }
     assert.ok(
-      receivedCookies.every(
+      provider.receivedCookies.every(
         (cookie) =>
           !cookie.includes("analytics") &&
           !cookie.includes("private-application-cookie"),
@@ -210,87 +195,4 @@ async function call(jar: CookieJar, path: string, body?: Record<string, string>)
   for (const cookie of response.headers.getSetCookie())
     await jar.setCookie(cookie, origin);
   return response;
-}
-
-async function handleProvider(request: IncomingMessage, response: ServerResponse) {
-  const url = new URL(request.url!, providerOrigin);
-  const cookie = request.headers.cookie ?? "";
-  receivedCookies.push(cookie);
-  const token = cookie
-    .split("; ")
-    .find((entry) => entry.startsWith("__Secure-neon-auth.session_token="))
-    ?.split("=")[1];
-  if (url.pathname === "/auth/get-session") {
-    const user = token ? sessions.get(token) : undefined;
-    return reply(response, user ? session(user, token!) : null);
-  }
-  if (url.pathname === "/auth/sign-out") {
-    if (token) sessions.delete(token);
-    return reply(
-      response,
-      { success: true },
-      200,
-      "__Secure-neon-auth.session_token=; Domain=localhost; Path=/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
-    );
-  }
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) chunks.push(Buffer.from(chunk));
-  const body = JSON.parse(Buffer.concat(chunks).toString()) as {
-    email: string;
-    name?: string;
-    password: string;
-  };
-  let user = users.get(body.email);
-  if (url.pathname === "/auth/sign-up/email") {
-    if (user) return reply(response, { message: "Account already exists." }, 400);
-    user = {
-      id: `user-${++sequence}`,
-      email: body.email,
-      name: body.name!,
-      password: body.password,
-    };
-    users.set(body.email, user);
-  }
-  if (!user || user.password !== body.password)
-    return reply(response, { message: "Invalid email or password." }, 401);
-  const nextToken = `session-${++sequence}`;
-  sessions.set(nextToken, user);
-  return reply(
-    response,
-    { token: nextToken, user: session(user, nextToken).user },
-    200,
-    `__Secure-neon-auth.session_token=${nextToken}; Domain=localhost; Path=/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=3600`,
-  );
-}
-
-function session(user: User, token: string) {
-  const now = new Date().toISOString();
-  return {
-    session: {
-      id: token,
-      token,
-      userId: user.id,
-      createdAt: now,
-      updatedAt: now,
-      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-    },
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      emailVerified: false,
-      createdAt: now,
-      updatedAt: now,
-    },
-  };
-}
-
-function reply(response: ServerResponse, body: unknown, status = 200, cookie?: string) {
-  response.writeHead(status, {
-    "Content-Type": "application/json",
-    "Content-Encoding": "gzip",
-    "Cache-Control": "public, max-age=3600",
-    ...(cookie ? { "Set-Cookie": cookie } : {}),
-  });
-  response.end(gzipSync(JSON.stringify(body)));
 }
