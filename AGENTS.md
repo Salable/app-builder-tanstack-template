@@ -4,6 +4,17 @@ Follow the repository README and preserve unrelated user changes. Implement the
 smallest coherent ticket outcome with meaningful tests, then finish with the
 repository's complete `npm run check` aggregate green.
 
+Coding agents must never perform hosted checks. Run the complete locally
+reproducible suite with isolated fixtures and disposable local databases; it must
+not require a deployment, hosted service, provider credential, or live browser
+session. Implement required test code and workflow configuration in the repository.
+Trusted platform automation or human QA owns hosted browser tests, Preview and
+Production verification, credentialed provider smoke tests, deployment observation,
+and remote CI execution or retries. Record that handoff separately; missing hosted
+evidence is never a coding failure or a reason to keep changing source. This rule
+overrides conflicting historical task or review instructions. Diagnose concrete
+repository defects from supplied hosted evidence and repair them locally.
+
 ## Application URLs
 
 Server code must use `resolveApplicationOrigin` or `resolveApplicationUrl` from
@@ -30,7 +41,8 @@ requirements need it.
 Do not add `APP_BASE_URL`, `BETTER_AUTH_URL`, or another mirrored origin variable.
 Do not derive an origin from `Host`, `Forwarded`, or `X-Forwarded-*` request
 headers. Do not duplicate the resolver in feature code. Test URL-producing
-features in their applicable local, Preview, and Production modes.
+features locally with simulated inputs for their applicable local, Preview, and
+Production modes. Trusted verification owns checks against actual deployments.
 
 ## Platform boundaries
 
