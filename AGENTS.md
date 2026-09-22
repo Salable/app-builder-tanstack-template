@@ -15,6 +15,20 @@ evidence is never a coding failure or a reason to keep changing source. This rul
 overrides conflicting historical task or review instructions. Diagnose concrete
 repository defects from supplied hosted evidence and repair them locally.
 
+## Product entry experience
+
+The starter homepage is installation scaffolding. Initial product delivery must
+replace it with a designed, product-specific landing page, including the accepted
+value proposition, primary action, account navigation, and public pricing when
+applicable. An explicitly private or internal application may instead open on its
+appropriate sign-in or application view. Remove starter branding, setup copy,
+framework demonstrations, and foundation status panels from the product homepage.
+Use coherent typography, layout, responsive behavior, and accessible navigation;
+reuse the existing auth/session implementation. Do not invent product features,
+pricing, testimonials, or customer counts. Keep local tests for the entry route,
+primary actions, mobile layout, and removal of starter content. Work within the
+active ticket; record missing separately owned work for the project plan.
+
 ## Application URLs
 
 Server code must use `resolveApplicationOrigin` or `resolveApplicationUrl` from
