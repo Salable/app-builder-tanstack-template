@@ -41,6 +41,14 @@ email links.
   `VERCEL_PROJECT_PRODUCTION_URL` system variable.
 - Local development and tests resolve from the loopback `HOST` and `PORT`.
 
+HTML navigation uses the canonical application origin before account forms render.
+A Vercel Preview alias redirects to that deployment's `VERCEL_URL`, preserving its
+path and query. Signup, callbacks, and host-only session cookies then use one
+origin as deployment URLs change. Keep API requests and POST bodies out of that
+redirect; never spoof an auth request's Origin to bypass provider validation or
+trust every `*.vercel.app` host. Neon's native integration owns provisioning the
+auth endpoint and trusted domain for each preview.
+
 Vercel's **Automatically expose System Environment Variables** project setting
 must remain enabled. A missing Vercel system variable is deployment-configuration
 evidence; report it explicitly instead of adding another origin source.

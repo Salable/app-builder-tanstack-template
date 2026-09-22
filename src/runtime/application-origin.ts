@@ -81,6 +81,35 @@ export function resolveApplicationUrl(
   return resolved.toString();
 }
 
+/** Keep navigation, host-only auth cookies, and callbacks on the same origin. */
+export function canonicalApplicationRedirect(
+  request: Request,
+  environment: RuntimeEnvironment = process.env,
+): Response | null {
+  if (
+    !["GET", "HEAD"].includes(request.method) ||
+    !request.headers.get("accept")?.includes("text/html") ||
+    !["preview", "production"].includes(environment.VERCEL_ENV ?? "")
+  )
+    return null;
+
+  const current = new URL(request.url);
+  const origin = resolveApplicationOrigin(environment);
+  // Vercel terminates HTTPS before the Node adapter, whose request URL can be
+  // HTTP. Compare hosts so that a canonical request cannot redirect to itself;
+  // the destination origin and HTTPS scheme still come only from Vercel's env.
+  if (current.host === new URL(origin).host) return null;
+
+  // Assign the path rather than resolving it, so // cannot replace the host.
+  const destination = new URL(origin);
+  destination.pathname = current.pathname;
+  destination.search = current.search;
+  return new Response(null, {
+    status: 307,
+    headers: { Location: destination.href, "Cache-Control": "private, no-store" },
+  });
+}
+
 function vercelOrigin(value: string | undefined, name: string): string {
   const host = required(value, name);
   if (/[/\\:@?#\s]/.test(host)) {

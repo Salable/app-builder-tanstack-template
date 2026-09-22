@@ -2,6 +2,7 @@ import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { publicApi } from "./api/app";
 import { getAuthenticationRuntime } from "./identity/auth-runtime";
 import { IdentityConfigurationError } from "./identity/identity-provider";
+import { canonicalApplicationRedirect } from "./runtime/application-origin";
 
 export default createServerEntry({
   async fetch(request) {
@@ -30,6 +31,6 @@ export default createServerEntry({
         throw error;
       }
     }
-    return handler.fetch(request);
+    return canonicalApplicationRedirect(request) ?? handler.fetch(request);
   },
 });

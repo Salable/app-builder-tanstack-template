@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { verifyPreviewOrigins } from "./preview-origin-check";
 
 const host = "127.0.0.1";
 const port = await reserveLoopbackPort();
@@ -83,6 +84,8 @@ try {
     new Promise<void>((resolve) => setTimeout(resolve, 2_000)),
   ]);
 }
+
+await verifyPreviewOrigins();
 
 async function waitForResponse(
   pathname: string,
