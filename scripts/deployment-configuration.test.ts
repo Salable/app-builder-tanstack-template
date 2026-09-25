@@ -69,7 +69,9 @@ describe("deployment environment contract", () => {
       applicationOrigin: Record<string, unknown>;
       environment: Array<{ name: string }>;
     };
-    const agentGuidance = readFileSync("AGENTS.md", "utf8");
+    const agentIndex = readFileSync("AGENTS.md", "utf8");
+    expect(agentIndex).toContain("(docs/agent-integrations.md)");
+    const agentGuidance = readFileSync("docs/agent-integrations.md", "utf8");
     const deploymentRunner = readFileSync("scripts/deploy-vercel.ts", "utf8");
 
     expect(manifest.applicationOrigin).toEqual({
@@ -96,14 +98,16 @@ describe("deployment environment contract", () => {
   });
 
   it("records managed Neon Auth as a ready application capability", () => {
-    const agentGuidance = readFileSync("AGENTS.md", "utf8");
+    const agentIndex = readFileSync("AGENTS.md", "utf8");
+    expect(agentIndex).toContain("(docs/agent-integrations.md)");
+    const agentGuidance = readFileSync("docs/agent-integrations.md", "utf8");
     const readme = readFileSync("README.md", "utf8");
 
     for (const guidance of [agentGuidance, readme]) {
       const normalizedGuidance = guidance.replace(/\s+/g, " ");
 
       expect(normalizedGuidance).toMatch(
-        /Vercel[^.]*Neon[^.]*provision(?:s|ed)?[^.]*(?:managed service|managed Neon Auth)/i,
+        /Vercel[^.]*Neon[^.]*provision(?:s|ed|ing)?[^.]*(?:managed service|managed Neon Auth)/i,
       );
       expect(normalizedGuidance).toMatch(/email\/password registration and sessions/i);
       expect(normalizedGuidance).toMatch(

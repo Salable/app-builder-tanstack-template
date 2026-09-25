@@ -1,0 +1,111 @@
+# Task-specific integration guidance
+
+Consult the relevant section when it is needed for the active ticket.
+
+## Salable Test Mode billing
+
+Required Salable Test Mode catalog setup is coding work, not hosted QA. Within
+approved billing scope, use the supplied project credentials and `salable-design`
+to call the API directly, create the required resources, read them back by ID,
+and write real non-secret IDs to `.salable/manifest.json`. Reuse confirmed IDs on
+resumed work. Do not replace this work with an operator handoff, another approval,
+or fixture IDs. Reviewers inspect the manifest and readback evidence without
+calling the provider. Local tests remain independent of the API. Never expose
+keys or perform Live Mode mutations.
+
+## Product entry experience
+
+The starter homepage is installation scaffolding. Initial product delivery must
+replace it with a designed, product-specific landing page, including the accepted
+value proposition, primary action, account navigation, and public pricing when
+applicable. An explicitly private or internal application may instead open on its
+appropriate sign-in or application view. Remove starter branding, setup copy,
+framework demonstrations, and foundation status panels from the product homepage.
+Use coherent typography, layout, responsive behavior, and accessible navigation;
+reuse the existing auth/session implementation. Do not invent product features,
+pricing, testimonials, or customer counts. Keep local tests for the entry route,
+primary actions, mobile layout, and removal of starter content. Work within the
+active ticket; record missing separately owned work for the project plan.
+
+## Application URLs
+
+Server code must use `resolveApplicationOrigin` or `resolveApplicationUrl` from
+`src/runtime/application-origin.ts` whenever it needs an absolute application URL,
+including authentication callbacks, checkout returns, webhook instructions, and
+email links.
+
+- Vercel Preview resolves from the trusted `VERCEL_URL` system variable.
+- Vercel Production resolves from the trusted
+  `VERCEL_PROJECT_PRODUCTION_URL` system variable.
+- Local development and tests resolve from the loopback `HOST` and `PORT`.
+
+HTML navigation uses the canonical application origin before account forms render.
+A Vercel Preview alias redirects to that deployment's `VERCEL_URL`, preserving its
+path and query. Signup, callbacks, and host-only session cookies then use one
+origin as deployment URLs change. Keep API requests and POST bodies out of that
+redirect; never spoof an auth request's Origin to bypass provider validation or
+trust every `*.vercel.app` host. Neon's native integration owns provisioning the
+auth endpoint and trusted domain for each preview.
+
+Application URL construction is separate from managed Auth endpoint selection.
+Vercel URL variables do not replace the Neon-provided Auth variables below.
+
+Vercel's **Automatically expose System Environment Variables** project setting
+must remain enabled. A missing Vercel system variable is deployment-configuration
+evidence; report it explicitly instead of adding another origin source.
+
+The complete Vercel system-variable set is available to this project at the build
+and runtime phases documented by Vercel. Use those variables directly in
+server/build code when a feature needs Vercel deployment metadata; do not ask App
+Builder to copy or rename them. They are not automatically browser configuration:
+expose only an intentionally public, framework-prefixed value when the accepted
+requirements need it.
+
+Do not add `APP_BASE_URL`, `BETTER_AUTH_URL`, or another mirrored origin variable.
+Do not derive an origin from `Host`, `Forwarded`, or `X-Forwarded-*` request
+headers. Do not duplicate the resolver in feature code. Test URL-producing
+features locally with simulated inputs for their applicable local, Preview, and
+Production modes. Trusted verification owns checks against actual deployments.
+
+## Managed Neon Auth and Vercel Previews
+
+Use integration-provided `NEON_AUTH_BASE_URL` (server), `VITE_NEON_AUTH_URL`
+(public client build), and database variables (server). Neon owns Preview branches,
+Auth endpoints, and trusted origins. For Auth or Preview changes, read
+[deployment configuration](../README.md#identity-and-authorization).
+Preserve the SSR/session bridge; fix provider setup at its source.
+
+## Platform boundaries
+
+Vercel owns deployments and supplies its system URL variables. Its native Neon
+product owns generated-application database credentials. Agents never request or
+receive Vercel, Neon, Preview-database, Production-database, production-merge, or
+feature-flag management credentials.
+
+The standard email/password views and both authentication adapters are already
+implemented. Reuse `src/identity/auth-runtime.ts`, `/auth/sign-in`,
+`/auth/sign-up`, and the protected server identity boundary; adapt the product's
+presentation instead of replacing the cookie/session integration. Keep the
+managed HTTP integration tests green. Never instantiate a browser auth client
+per server request, forward unrelated cookies, cache authoritative session
+reads, or copy a compressed response header onto a decoded body.
+
+The recorded Neon Auth or self-hosted Better Auth choice is authoritative. In
+`NEON_AUTH` mode, Vercel and Neon own provisioning the managed service and
+injecting its deployment-specific URLs; never request their API keys. Neon's Managed Better Auth service
+natively supports email/password registration and sessions. When accepted
+requirements ask for email verification or Magic Link, configure the flow through
+Neon Auth. Implement and test the repository-side SDK/UI behavior and record the
+required Neon setting; agents do not request credentials or claim to mutate Neon.
+Neon owns those authentication emails and shared development delivery; custom SMTP
+in Neon is a production-release prerequisite, not a planning blocker. Do not add
+an application email SDK or webhook unless the requirements explicitly ask for a
+separate custom email flow. Preserve the self-hosted Better Auth path when that
+mode is recorded. Never add a social sign-in provider unless the accepted
+requirements explicitly name it. Authentication establishes identity only, so
+scope tenant data and resources to the authenticated `user.id` or an app-owned
+membership. Salable entitlements are the source of truth for access; webhooks are
+optional and user-requested only.
+
+Applied migration files are immutable. Add a new paired forward/rollback migration
+for schema changes and prove clean installation plus upgrade from the prior head.
