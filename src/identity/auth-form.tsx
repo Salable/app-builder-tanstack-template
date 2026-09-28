@@ -1,11 +1,14 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { authClient } from "./auth-client";
 
 type AuthMode = "sign-in" | "sign-up";
 
 export function AuthForm({ mode }: { mode: AuthMode }) {
+  const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => setReady(true), []);
+  const disabled = !ready || pending;
   const signingUp = mode === "sign-up";
   const title = signingUp ? "Create your account" : "Sign in";
 
@@ -49,10 +52,11 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
         <form
           className="mt-6 space-y-5"
+          method="post"
           onSubmit={(event) => {
             void submit(event);
           }}
-          aria-busy={pending}
+          aria-busy={disabled}
         >
           {signingUp && (
             <label className="block font-medium">
@@ -63,7 +67,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
                 autoComplete="name"
                 maxLength={200}
                 required
-                disabled={pending}
+                disabled={disabled}
               />
             </label>
           )}
@@ -75,7 +79,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
               name="email"
               autoComplete="email"
               required
-              disabled={pending}
+              disabled={disabled}
             />
           </label>
           <label className="block font-medium">
@@ -87,7 +91,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
               autoComplete={signingUp ? "new-password" : "current-password"}
               minLength={signingUp ? 8 : undefined}
               required
-              disabled={pending}
+              disabled={disabled}
             />
           </label>
           {error && (
@@ -98,7 +102,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           <button
             className="w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white disabled:opacity-60"
             type="submit"
-            disabled={pending}
+            disabled={disabled}
           >
             {pending ? "Please wait…" : title}
           </button>

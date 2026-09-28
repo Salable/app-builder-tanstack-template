@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderToString } from "react-dom/server";
 import { AuthForm } from "./auth-form";
 const mocks = vi.hoisted(() => ({ signIn: vi.fn(), signUp: vi.fn() }));
 vi.mock("./auth-client", () => ({
@@ -11,6 +12,24 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 describe("standard authentication forms", () => {
+  it.each(["sign-in", "sign-up"] as const)(
+    "keeps %s credentials disabled before hydration and out of URL submissions",
+    (mode) => {
+      const container = document.createElement("div");
+      container.innerHTML = renderToString(<AuthForm mode={mode} />);
+      const form = container.querySelector("form")!;
+      expect(form.method).toBe("post");
+      expect(form.querySelector<HTMLInputElement>('[name="email"]')!.disabled).toBe(
+        true,
+      );
+      expect(form.querySelector<HTMLInputElement>('[name="password"]')!.disabled).toBe(
+        true,
+      );
+      expect(
+        form.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled,
+      ).toBe(true);
+    },
+  );
   it("submits one registration, keeps pending feedback visible, and explains provider rejection", async () => {
     let finish!: (value: unknown) => void;
     mocks.signUp.mockImplementation(
