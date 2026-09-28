@@ -5,6 +5,7 @@ describe("PostgreSQL integration database admission", () => {
   it("requires an explicit disposable database marker", () => {
     const result = run({
       APP_BUILDER_TEST_DATABASE_URL: "postgresql://postgres@127.0.0.1:1/test",
+      APP_BUILDER_TEST_DISPOSABLE_DATABASE: "",
     });
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("APP_BUILDER_TEST_DISPOSABLE_DATABASE=1");
