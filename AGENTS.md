@@ -50,7 +50,8 @@ and Chromium. Use the committed lockfile; no OS or browser bootstrap is needed.
 For Playwright, use `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when set, with
 `--no-sandbox` inside the isolated worker. Keep default writable tool caches.
 `APP_BUILDER_TEST_DATABASE_URL`, when provided, is a disposable local PostgreSQL
-fixture managed by the host; the worker does not need Docker access.
+fixture managed by the host; the worker does not need Docker access. For database
+work, follow [database setup and tests](docs/agent-integrations.md#database-setup-and-tests).
 
 Project references are mounted read-only under `.app-builder/context`; its
 `manifest.json` lists available documents. Installed Salable skills

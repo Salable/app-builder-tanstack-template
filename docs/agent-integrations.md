@@ -75,6 +75,31 @@ Auth endpoints, and trusted origins. For Auth or Preview changes, read
 [deployment configuration](../README.md#identity-and-authorization).
 Preserve the SSR/session bridge; fix provider setup at its source.
 
+## Database setup and tests
+
+Reuse `scripts/run-postgres-integration.ts`, its real PostgreSQL suite and the
+existing migration runner. Extend them for the ticket; do not recreate database
+bootstrap for each feature.
+
+- In workers, use the supplied `APP_BUILDER_TEST_DATABASE_URL` with
+  `APP_BUILDER_TEST_DISPOSABLE_DATABASE=1`, preserving its loopback/disposable
+  validation. Do not install Docker or request its host socket.
+- For local/CI container startup, retain the pinned image, disposable storage and
+  loopback-only port. Preserve bounded `SELECT 1` readiness through the exact
+  connection URL before migrations or tests. Container startup, a published port
+  or a successful Unix-socket probe is insufficient: PostgreSQL's temporary
+  initialization server can accept socket connections before TCP is ready. If
+  using `pg_isready`, pass `--host 127.0.0.1`.
+- Preserve cleanup on success, startup failure and test failure, and propagate
+  failed exits. When changing the harness, cover both supplied-database and fresh
+  container paths. Run the real fresh-container check on a Docker-capable local/CI
+  host; workers can mock only the external process boundary for that path.
+
+Applied migration files are immutable. Add a new paired forward/rollback migration
+for schema changes and prove clean installation plus upgrade from the prior head.
+Hosted Neon configuration and verification remain platform-owned; local tests must
+never use Preview or Production databases.
+
 ## Platform boundaries
 
 Vercel owns deployments and supplies its system URL variables. Its native Neon
@@ -106,6 +131,3 @@ requirements explicitly name it. Authentication establishes identity only, so
 scope tenant data and resources to the authenticated `user.id` or an app-owned
 membership. Salable entitlements are the source of truth for access; webhooks are
 optional and user-requested only.
-
-Applied migration files are immutable. Add a new paired forward/rollback migration
-for schema changes and prove clean installation plus upgrade from the prior head.
