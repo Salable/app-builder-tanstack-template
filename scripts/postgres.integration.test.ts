@@ -14,7 +14,7 @@ import { installExternalNetworkDeny } from "./network-deny";
 import {
   FoundationPersistenceConflictError,
   PostgresInvitationSeatRepository,
-} from "../src/foundation/seat-management/postgres.ts";
+} from "../src/foundation/seat-management/postgres-seat-repository.ts";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (databaseUrl === undefined) {
@@ -386,7 +386,7 @@ describe("generated application PostgreSQL boundary", () => {
     assert.equal(reconciled.revision, 6);
   });
 
-  it("covers every documented health and project outcome through HTTP", async () => {
+  it("serves health metadata and rejects unsupported versions and malformed projects", async () => {
     const health = await fetch(`${origin}/api/v1/health`, {
       headers: {
         "API-Version": "1",
@@ -398,10 +398,10 @@ describe("generated application PostgreSQL boundary", () => {
     assert.equal(health.headers.get("X-Correlation-ID"), "corr_postgres");
 
     const unsupported = await postProject({ name: "Unsupported" }, "2");
-    await assertProblem(unsupported, 400, "unsupported-api-version");
+    await assertProblem(unsupported, 400, "UNSUPPORTED_API_VERSION");
 
     const invalid = await postProject({ name: "x", unexpected: true });
-    await assertProblem(invalid, 400, "invalid-request");
+    await assertProblem(invalid, 400, "INVALID_REQUEST");
   });
 
   it("proves database sessions and owner/tenant/entitlement isolation", async () => {
@@ -446,7 +446,7 @@ describe("generated application PostgreSQL boundary", () => {
     await assertProblem(
       await postProject({ name: "No session" }, "1", entitledOrganizationId),
       401,
-      "unauthorized",
+      "UNAUTHORIZED",
     );
     await assertProblem(
       await postProject(
@@ -456,7 +456,7 @@ describe("generated application PostgreSQL boundary", () => {
         alice.cookie,
       ),
       403,
-      "forbidden",
+      "FORBIDDEN",
     );
 
     const created = await postProject(
@@ -507,7 +507,7 @@ describe("generated application PostgreSQL boundary", () => {
         alice.cookie,
       ),
       409,
-      "project-name-conflict",
+      "PROJECT_NAME_CONFLICT",
     );
     const sameNameInOtherOrganization = await postProject(
       { name: "ALPHA PROJECT" },
@@ -524,7 +524,7 @@ describe("generated application PostgreSQL boundary", () => {
       entitledOrganizationId,
       alice.cookie,
     );
-    const failureBody = await assertProblem(failed, 500, "internal");
+    const failureBody = await assertProblem(failed, 500, "INTERNAL");
     assert.doesNotMatch(
       JSON.stringify(failureBody),
       /postgres|sql|insert|transaction|failure/i,
@@ -555,21 +555,21 @@ describe("generated application PostgreSQL boundary", () => {
       ],
     );
 
-    await assertProblem(await getProtectedFeature(ownedProjectId), 401, "unauthorized");
+    await assertProblem(await getProtectedFeature(ownedProjectId), 401, "UNAUTHORIZED");
     await assertProblem(
       await getProtectedFeature(ownedProjectId, bob.cookie),
       404,
-      "not-found",
+      "NOT_FOUND",
     );
     await assertProblem(
       await getProtectedFeature(ownedProjectId, carol.cookie),
       404,
-      "not-found",
+      "NOT_FOUND",
     );
     await assertProblem(
       await getProtectedFeature(unentitledProjectId, carol.cookie),
       403,
-      "entitlement-required",
+      "ENTITLEMENT_REQUIRED",
     );
 
     const allowed = await getProtectedFeature(ownedProjectId, alice.cookie);
@@ -593,7 +593,7 @@ describe("generated application PostgreSQL boundary", () => {
     await assertProblem(
       await getProtectedFeature(ownedProjectId, alice.cookie),
       401,
-      "unauthorized",
+      "UNAUTHORIZED",
     );
 
     const signOut = await fetch(`${origin}/api/auth/sign-out`, {
@@ -609,7 +609,7 @@ describe("generated application PostgreSQL boundary", () => {
     await assertProblem(
       await getProtectedFeature(ownedProjectId, bob.cookie),
       401,
-      "unauthorized",
+      "UNAUTHORIZED",
     );
   });
 
@@ -694,7 +694,7 @@ async function postProject(
 function assertProblem(
   response: Response,
   status: number,
-  typeSuffix: string,
+  code: string,
 ): Promise<unknown> {
   assert.equal(response.status, status);
   assert.match(
@@ -703,7 +703,8 @@ function assertProblem(
   );
   return response.json().then((body) => {
     const problem = ProblemDetailSchema.parse(body);
-    assert.match(problem.type, new RegExp(`/${typeSuffix}$`));
+    assert.equal(problem.type, "about:blank");
+    assert.equal(problem.code, code);
     assert.equal(problem.status, status);
     return problem;
   });

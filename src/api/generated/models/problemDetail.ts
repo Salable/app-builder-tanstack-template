@@ -5,8 +5,11 @@
  * Strict current API for an App Builder generated application.
  * OpenAPI spec version: 1.0.0
  */
+import type { ProblemDetailType } from "./problemDetailType.ts";
 
 export interface ProblemDetail {
+  /** @pattern ^[A-Z][A-Z0-9_]*$ */
+  code: string;
   /** @minLength 1 */
   correlationId: string;
   /** @minLength 1 */
@@ -20,5 +23,5 @@ export interface ProblemDetail {
   status: number;
   /** @minLength 1 */
   title: string;
-  type: string;
+  type: ProblemDetailType;
 }

@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { ProblemDetailSchema as ClientProblemDetailSchema } from "./problem-detail";
 
 export const ApiVersionHeaderSchema = z.literal("1").openapi({
   example: "1",
@@ -64,14 +65,4 @@ export const ProtectedFeatureResponseSchema = z
   .strict()
   .openapi("ProtectedFeatureResponse");
 
-export const ProblemDetailSchema = z
-  .object({
-    correlationId: z.string().min(1),
-    detail: z.string().min(1),
-    instance: z.string().min(1),
-    status: z.number().int().min(400).max(599),
-    title: z.string().min(1),
-    type: z.string().url(),
-  })
-  .strict()
-  .openapi("ProblemDetail");
+export const ProblemDetailSchema = ClientProblemDetailSchema.openapi("ProblemDetail");

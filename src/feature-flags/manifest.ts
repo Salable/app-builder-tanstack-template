@@ -9,7 +9,7 @@ import {
   valueKind,
 } from "./contracts";
 
-export const FeatureFlagManifestDefinitionSchema = z
+const FeatureFlagManifestDefinitionSchema = z
   .object({
     key: FeatureFlagKeySchema,
     valueKind: FeatureFlagValueKindSchema,

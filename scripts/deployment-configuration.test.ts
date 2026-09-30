@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -171,13 +171,16 @@ describe("deployment environment contract", () => {
     };
     const organizationId = "11111111-1111-4111-8111-111111111111";
     const declaredEnvironment: Record<string, string | undefined> = Object.fromEntries(
-      manifest.environment.map(({ name }) => [name, undefined]),
+      manifest.environment.map(({ name }) => [
+        name,
+        name === "APP_BUILDER_ENTITLED_ORGANIZATION_IDS" ? organizationId : undefined,
+      ]),
     );
-    declaredEnvironment.APP_BUILDER_ENTITLED_ORGANIZATION_IDS = organizationId;
 
     expect(
       await createEntitlementProvider({
         ...declaredEnvironment,
+        NODE_ENV: "production",
       }).hasEntitlement({
         capability: "protected-insights",
         organizationId,
@@ -190,22 +193,34 @@ describe("deployment environment contract", () => {
     ["missing", undefined],
     ["malformed", JSON.stringify({ version: 2 })],
   ])("rejects %s built Vercel output", (_name, contents) => {
-    const configPath = join(
-      mkdtempSync(join(tmpdir(), "vercel-output-")),
-      "config.json",
-    );
-    if (contents !== undefined) writeFileSync(configPath, contents);
-    const result = spawnSync(
-      process.execPath,
-      [
-        "--import",
-        "tsx",
-        "scripts/check-deployment-manifest.ts",
-        "--built",
-        configPath,
-      ],
-      { encoding: "utf8" },
-    );
-    expect(result.status).not.toBe(0);
+    const directory = mkdtempSync(join(tmpdir(), "vercel-output-"));
+    const configPath = join(directory, "config.json");
+    try {
+      if (contents !== undefined) writeFileSync(configPath, contents);
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--import",
+          "tsx",
+          "scripts/check-deployment-manifest.ts",
+          "--built",
+          configPath,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(result.error).toBeUndefined();
+      expect(result.signal).toBeNull();
+      expect(result.status).toBe(1);
+      if (contents === undefined) {
+        expect(result.stderr).toContain("ENOENT");
+        expect(result.stderr).toContain(configPath);
+      } else {
+        expect(result.stderr).toContain("ZodError");
+        expect(result.stderr).toContain('"version"');
+        expect(result.stderr).toContain("Invalid input: expected 3");
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

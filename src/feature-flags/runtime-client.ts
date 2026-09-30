@@ -62,7 +62,14 @@ export class AppBuilderFeatureFlagRuntimeClient implements FeatureFlagRuntimeCli
       body: JSON.stringify({ keys: [...new Set(keys)].sort(), context }),
     });
     if (!response.ok) throw new Error("Feature flag control plane is unavailable.");
-    return RuntimeFeatureFlagResponseSchema.parse(await response.json()).values;
+    const result = RuntimeFeatureFlagResponseSchema.parse(await response.json());
+    if (
+      result.projectId !== this.projectId ||
+      result.environmentId !== this.environmentId
+    ) {
+      throw new Error("Feature flag response belongs to another environment.");
+    }
+    return result.values;
   }
 
   registerSubject(externalKey: string, label: string | null = null) {
@@ -88,7 +95,7 @@ export class AppBuilderFeatureFlagRuntimeClient implements FeatureFlagRuntimeCli
     if (!response.ok) throw new Error("Feature flag access registration failed.");
   }
 
-  private async register<Schema extends z.ZodType>(
+  private async register<Schema extends z.ZodType<{ projectId: string }>>(
     path: string,
     body: unknown,
     schema: Schema,
@@ -98,7 +105,11 @@ export class AppBuilderFeatureFlagRuntimeClient implements FeatureFlagRuntimeCli
       body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error("Feature flag access registration failed.");
-    return schema.parse(await response.json());
+    const result = schema.parse(await response.json());
+    if (result.projectId !== this.projectId) {
+      throw new Error("Feature flag registration belongs to another project.");
+    }
+    return result as z.infer<Schema>;
   }
 
   private request(path: string, init: RequestInit): Promise<Response> {

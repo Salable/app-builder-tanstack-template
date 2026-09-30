@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { PostgresDatabase, type Database } from "../persistence/database";
 
-export const ProjectAccessSchema = z
+const ProjectAccessSchema = z
   .object({
     organizationId: z.uuid(),
     projectId: z.uuid(),

@@ -1,5 +1,5 @@
-import type { OrganisationInvitation } from "../invitations/index.ts";
-import type { OrganisationMembership } from "../organisations/index.ts";
+import type { OrganisationInvitation } from "../invitations/organisation-invitations.ts";
+import type { OrganisationMembership } from "../organisations/organisation-membership.ts";
 
 export type SeatLedger = Readonly<{
   organisationId: string;

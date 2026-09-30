@@ -48,6 +48,10 @@
       "ProblemDetail": {
         "additionalProperties": false,
         "properties": {
+          "code": {
+            "pattern": "^[A-Z][A-Z0-9_]*$",
+            "type": "string"
+          },
           "correlationId": {
             "minLength": 1,
             "type": "string"
@@ -70,12 +74,15 @@
             "type": "string"
           },
           "type": {
-            "format": "uri",
+            "enum": [
+              "about:blank"
+            ],
             "type": "string"
           }
         },
         "required": [
           "correlationId",
+          "code",
           "detail",
           "instance",
           "status",

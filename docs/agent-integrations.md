@@ -2,6 +2,33 @@
 
 Consult the relevant section when it is needed for the active ticket.
 
+## Runtime environments
+
+The mounted operation document contains `body.environment`: saved variable names,
+Preview/Production revisions, Vercel delivery status, key mode and public-build vs
+server-only exposure. Absent application variables are unconfigured. Saved is not
+applied; applied settings require a new deployment. Provider-managed names describe
+the integration contract, not a successful hosted check.
+
+Vercel/Neon supply deployment-specific `DATABASE_URL`, `NEON_AUTH_BASE_URL` and
+`VITE_NEON_AUTH_URL`. Retain the auth bridge and use `resolveApplicationOrigin` /
+`resolveApplicationUrl` for application URLs. Do not copy Production credentials
+to Preview or invent origin mirrors, fallback keys, URLs or problem domains.
+Declare any additional variable's name, target, exposure and purpose as a setup
+requirement; declaring it does not configure it.
+
+Only Preview's `SALABLE_SECRET_KEY` and `SALABLE_PUBLISHABLE_KEY` Test Mode pair is
+available to authors. Keep catalog IDs in `.salable/manifest.json` consistent with
+the runtime key mode; Production hosting can still use Test Mode. Changing to
+Live Mode needs a matching Live catalog through the trusted release boundary,
+never an author mutation. A publishable key is public-safe but does not become
+a browser build variable merely because it exists on the server.
+
+GitHub Actions needs no application secrets. Use its built-in `GITHUB_TOKEN` with
+`contents: read`, local database fixtures and auth/Salable doubles. Vercel owns
+deployments and hosted credentials. Use `APP_BUILDER_TEST_DATABASE_URL` locally;
+never read Preview/Production database or deployment credentials into a worker.
+
 ## Salable Test Mode billing
 
 Required Salable Test Mode catalog setup is coding work, not hosted QA. Within
@@ -39,14 +66,6 @@ email links.
   `VERCEL_PROJECT_PRODUCTION_URL` system variable.
 - Local development and tests resolve from the loopback `HOST` and `PORT`.
 
-HTML navigation uses the canonical application origin before account forms render.
-A Vercel Preview alias redirects to that deployment's `VERCEL_URL`, preserving its
-path and query. Signup, callbacks, and host-only session cookies then use one
-origin as deployment URLs change. Keep API requests and POST bodies out of that
-redirect; never spoof an auth request's Origin to bypass provider validation or
-trust every `*.vercel.app` host. Neon's native integration owns provisioning the
-auth endpoint and trusted domain for each preview.
-
 Application URL construction is separate from managed Auth endpoint selection.
 Vercel URL variables do not replace the Neon-provided Auth variables below.
 
@@ -72,7 +91,7 @@ Production modes. Trusted verification owns checks against actual deployments.
 Use integration-provided `NEON_AUTH_BASE_URL` (server), `VITE_NEON_AUTH_URL`
 (public client build), and database variables (server). Neon owns Preview branches,
 Auth endpoints, and trusted origins. For Auth or Preview changes, read
-[deployment configuration](../README.md#identity-and-authorization).
+[deployment configuration](../README.md#managed-auth-deployment-configuration).
 Preserve the SSR/session bridge; fix provider setup at its source.
 
 ## Database setup and tests

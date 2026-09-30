@@ -1,14 +1,14 @@
-import type { AuthenticatedIdentity } from "../authentication/index.ts";
+import type { AuthenticatedIdentity } from "../authentication/authenticated-identity.ts";
 import {
   acceptOrganisationInvitation,
   createOrganisationInvitation,
   revokeOrganisationInvitation,
   type OrganisationInvitation,
-} from "../invitations/index.ts";
+} from "../invitations/organisation-invitations.ts";
 import type {
   OrganisationMembership,
   OrganisationRole,
-} from "../organisations/index.ts";
+} from "../organisations/organisation-membership.ts";
 import {
   assignAcceptedInvitationSeat,
   reconcilePurchasedSeats,
@@ -16,7 +16,7 @@ import {
   releaseMembershipSeat,
   reserveInvitationSeat,
   type SeatLedger,
-} from "./index.ts";
+} from "./seat-ledger.ts";
 
 type SqlRow = Record<string, unknown>;
 

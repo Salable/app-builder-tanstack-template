@@ -21,7 +21,9 @@ import {
 import {
   getIdentityProvider,
   IdentityConfigurationError,
+  IdentityProviderUnavailableError,
 } from "../identity/identity-provider";
+import { createProblemDetail, reportProblem } from "./problem-detail";
 import { getProjectRepository } from "../projects/repository-provider";
 import {
   ProjectNameConflictError,
@@ -30,7 +32,6 @@ import {
 
 const API_VERSION_HEADER = "API-Version";
 const CORRELATION_ID_HEADER = "X-Correlation-ID";
-const PROBLEM_BASE = "https://generated-app.salable.dev/problems";
 
 type ApiVariables = {
   correlationId: string;
@@ -48,8 +49,7 @@ export const publicApi = new OpenAPIHono<{ Variables: ApiVariables }>({
     return problem(context, {
       detail: "The request did not match the published contract.",
       status: 400,
-      title: "Invalid request",
-      type: `${PROBLEM_BASE}/invalid-request`,
+      code: "INVALID_REQUEST",
     });
   },
 });
@@ -71,8 +71,7 @@ publicApi.use("/api/v1/*", async (context, next) => {
     return problem(context, {
       detail: `API-Version must be exactly 1; received ${JSON.stringify(requestedVersion ?? null)}.`,
       status: 400,
-      title: "Unsupported API version",
-      type: `${PROBLEM_BASE}/unsupported-api-version`,
+      code: "UNSUPPORTED_API_VERSION",
     });
   }
 
@@ -184,8 +183,7 @@ publicApi.openapi(createProjectRoute, async (context) => {
       return problem(context, {
         detail: "A valid session is required.",
         status: 401,
-        title: "Unauthorized",
-        type: `${PROBLEM_BASE}/unauthorized`,
+        code: "UNAUTHORIZED",
       });
     }
     const organizationId = context.req.valid("header")["X-Organization-ID"];
@@ -200,16 +198,14 @@ publicApi.openapi(createProjectRoute, async (context) => {
       return problem(context, {
         detail: "A project with that name already exists.",
         status: 409,
-        title: "Project name conflict",
-        type: `${PROBLEM_BASE}/project-name-conflict`,
+        code: "PROJECT_NAME_CONFLICT",
       });
     }
     if (error instanceof ProjectOrganizationAccessError) {
       return problem(context, {
         detail: "The user is not a member of the requested organization.",
         status: 403,
-        title: "Forbidden",
-        type: `${PROBLEM_BASE}/forbidden`,
+        code: "FORBIDDEN",
       });
     }
     throw error;
@@ -292,8 +288,7 @@ publicApi.openapi(protectedFeatureRoute, async (context) => {
     return problem(context, {
       detail: "A valid session is required.",
       status: 401,
-      title: "Unauthorized",
-      type: `${PROBLEM_BASE}/unauthorized`,
+      code: "UNAUTHORIZED",
     });
   }
 
@@ -306,8 +301,7 @@ publicApi.openapi(protectedFeatureRoute, async (context) => {
     return problem(context, {
       detail: "The requested project does not exist.",
       status: 404,
-      title: "Not Found",
-      type: `${PROBLEM_BASE}/not-found`,
+      code: "NOT_FOUND",
     });
   }
 
@@ -320,8 +314,7 @@ publicApi.openapi(protectedFeatureRoute, async (context) => {
     return problem(context, {
       detail: "The project does not include this capability.",
       status: 403,
-      title: "Entitlement required",
-      type: `${PROBLEM_BASE}/entitlement-required`,
+      code: "ENTITLEMENT_REQUIRED",
     });
   }
 
@@ -339,28 +332,30 @@ publicApi.notFound((context) =>
   problem(context, {
     detail: "The requested API route does not exist.",
     status: 404,
-    title: "Not Found",
-    type: `${PROBLEM_BASE}/not-found`,
+    code: "NOT_FOUND",
   }),
 );
 
 publicApi.onError((error, context) => {
   if (error instanceof IdentityConfigurationError) {
     return problem(context, {
-      detail: "The identity service is not available.",
+      detail:
+        "The application's sign-in configuration is incomplete. Contact the application owner with this reference.",
       status: 503,
-      title: "Service Unavailable",
-      type: `${PROBLEM_BASE}/identity-unavailable`,
+      code: "IDENTITY_CONFIGURATION_MISSING",
     });
   }
-  console.error(
-    `Public API request failed correlationId=${context.get("correlationId") ?? "unassigned"} error=${error.name}`,
-  );
+  if (error instanceof IdentityProviderUnavailableError) {
+    return problem(context, {
+      detail: "The sign-in service is temporarily unavailable. Please retry.",
+      status: 503,
+      code: "IDENTITY_PROVIDER_UNAVAILABLE",
+    });
+  }
   return problem(context, {
     detail: "The server could not complete the request.",
     status: 500,
-    title: "Internal Server Error",
-    type: `${PROBLEM_BASE}/internal`,
+    code: "INTERNAL",
   });
 });
 
@@ -407,23 +402,23 @@ function problem<Status extends 400 | 401 | 403 | 404 | 409 | 500 | 503>(
   details: {
     detail: string;
     status: Status;
-    title: string;
-    type: string;
+    code: string;
   },
 ) {
-  const body = {
+  const body = createProblemDetail({
+    code: details.code,
     correlationId: context.get("correlationId") ?? `corr_${crypto.randomUUID()}`,
     detail: details.detail,
     instance: new URL(context.req.url).pathname,
     status: details.status,
-    title: details.title,
-    type: details.type,
-  };
+  });
 
   context.header(CORRELATION_ID_HEADER, body.correlationId);
   context.header(API_VERSION_HEADER, "1");
   context.header("Vary", API_VERSION_HEADER);
-  return context.json(body, details.status, {
+  const response = context.json(body, details.status, {
     "Content-Type": "application/problem+json",
   });
+  reportProblem(body);
+  return response;
 }

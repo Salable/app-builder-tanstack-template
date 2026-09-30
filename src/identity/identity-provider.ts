@@ -22,6 +22,13 @@ export class IdentityConfigurationError extends Error {
   }
 }
 
+export class IdentityProviderUnavailableError extends Error {
+  constructor() {
+    super("The identity provider could not complete the request.");
+    this.name = "IdentityProviderUnavailableError";
+  }
+}
+
 let identityProvider: IdentityProvider | undefined;
 
 export function getIdentityProvider(): IdentityProvider {

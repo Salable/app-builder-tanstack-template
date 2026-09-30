@@ -12,7 +12,9 @@ project owner controls their priority.
 Keep functions readable as a recipe: validate inputs, process the request,
 finalise the result, then persist and return. Prefer atomic storage where partial
 writes would leave broken state. Keep business rules on the server and use the
-existing API error contract.
+existing API error contract: `about:blank`, a stable `code`, safe detail and a
+correlation ID. Use the shared problem helpers; distinguish missing configuration
+from provider outages and report server failures without secrets or provider bodies.
 
 ## Verification and completion
 
@@ -59,6 +61,11 @@ Project references are mounted read-only under `.app-builder/context`; its
 Use them only when relevant. GitHub publication is platform-owned. Agents do not
 receive Vercel, Neon, Preview/Production database or release credentials. Never
 copy secrets or mounted documents into source or result summaries.
+
+For configuration work, the mounted operation document's `body.environment` is
+the names-only Preview/Production contract. Follow
+[runtime environments](docs/agent-integrations.md#runtime-environments); do not
+invent variables, credentials or domains.
 
 See [README](README.md) for project scripts and architecture and
 [task-specific integrations](docs/agent-integrations.md) for auth, application

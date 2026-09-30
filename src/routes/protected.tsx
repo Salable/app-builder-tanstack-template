@@ -84,7 +84,7 @@ function ProtectedRoute() {
               Identity service unavailable
             </h2>
             <p className="mt-3 text-slate-700">
-              Sign-in is not configured for this deployment. Please try again later.
+              {result.detail} Reference: {result.correlationId}.
             </p>
           </section>
         )}

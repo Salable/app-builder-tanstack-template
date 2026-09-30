@@ -76,8 +76,8 @@ The Vercel-installed Neon authentication choice is authoritative. When both
 `NEON_AUTH_BASE_URL` and `VITE_NEON_AUTH_URL` are present, the server uses the
 pinned Neon Auth SDK and `NEON_AUTH_COOKIE_SECRET`. The URLs must name the same
 managed service. Partial or inconsistent configuration is rejected; it never
-starts a second identity provider. These values are supplied by the native Neon
-integration and the trusted App Builder runtime setup.
+starts a second identity provider. The native Neon integration supplies both Auth
+URLs; the trusted App Builder runtime setup supplies `NEON_AUTH_COOKIE_SECRET`.
 
 When neither Neon URL is present, the self-hosted Better Auth adapter provides
 email/password accounts against PostgreSQL. Configure that mode with:
@@ -112,8 +112,8 @@ use those names directly without App Builder aliases. This does not make every
 value browser configuration; client exposure remains an explicit, public-data
 decision.
 
-In `NEON_AUTH` mode, Vercel's native Neon product has already provisioned Managed
-Neon Auth and injected its application URLs. App Builder and its agents never ask
+In `NEON_AUTH` mode, Vercel's native Neon product owns provisioning Managed
+Neon Auth and injecting its deployment-specific URLs. App Builder and its agents never ask
 for a Vercel or Neon API key. Neon's Managed Better Auth service natively supports
 email/password registration and sessions. When accepted requirements include
 email verification or Magic Link, configure that flow through Neon Auth. Neon owns
@@ -140,6 +140,49 @@ a standards-based cookie jar. It covers registration, sign-in, protected SSR,
 refresh, separate users, compressed provider responses, cookie filtering,
 sign-out, and revoked-session denial. It requires no hosted credentials and does
 not claim to verify a live Neon project's configuration.
+
+### Managed Auth deployment configuration
+
+Use the native Neon integration's variables directly:
+
+| Variable                | Use                                                   |
+| ----------------------- | ----------------------------------------------------- |
+| `NEON_AUTH_BASE_URL`    | Server-side managed Auth endpoint                     |
+| `VITE_NEON_AUTH_URL`    | Public managed Auth URL for the Vite client build     |
+| `DATABASE_URL`          | Server-side pooled database connection                |
+| `DATABASE_URL_UNPOOLED` | Server-side direct database connection, when required |
+
+The URLs select the managed Auth service. The existing same-origin `/api/auth`
+bridge keeps application session cookies available to protected SSR and API
+requests; it does not create another auth server. Vercel's application URL
+variables continue to serve application links and callbacks.
+
+The trusted owner enables Auth on the connected production branch, automated
+Preview branching (**Required → Preview**), and **Resource must be active before
+deployment**. Neon then provisions each Preview's branch and Auth endpoint,
+injects its branch-specific variables, and registers its Preview URL and matching
+custom Preview domains. Preview overrides are injected during deployment and
+override project-level Preview values; they are not visible in the project's
+environment-variable settings. Detecting Production Auth variables therefore
+does not prove Preview provisioning succeeded.
+
+Inspect the existing connection and correct its settings before considering
+reinstallation. Create a fresh deployment after a configuration correction.
+Verify required Production domains in Neon Auth's configuration as part of
+Production setup. App Builder's runtime setup owns its cookie secret and runtime
+values; it does not repair Neon-owned Auth, branching, or trusted domains.
+
+For an `Invalid origin` response, establish the effective deployment Auth endpoint,
+actual request origin, and registered domains before changing source. Do not copy
+Production Auth URLs into Preview, maintain a manual Preview domain list, trust
+all `*.vercel.app` hosts, or use origin rewrites or canonical redirects to replace
+provider provisioning. Preserve the SSR cookie/session integration and test any
+repository repair locally with simulated Preview variables and the local Auth
+fixture. Hosted verification belongs to trusted automation or human QA.
+
+References: [Neon's integration setup and variables](https://neon.com/docs/guides/vercel-managed-integration),
+[automatic Preview Auth](https://neon.com/blog/auth-that-just-works-in-vercel-previews),
+and [domain configuration](https://neon.com/docs/auth/guides/configure-domains).
 
 ## App Builder-owned feature flags
 

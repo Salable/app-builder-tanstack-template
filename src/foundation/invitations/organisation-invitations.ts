@@ -1,8 +1,8 @@
-import type { AuthenticatedIdentity } from "../authentication/index.ts";
+import type { AuthenticatedIdentity } from "../authentication/authenticated-identity.ts";
 import type {
   OrganisationMembership,
   OrganisationRole,
-} from "../organisations/index.ts";
+} from "../organisations/organisation-membership.ts";
 
 export type OrganisationInvitation = Readonly<{
   invitationId: string;

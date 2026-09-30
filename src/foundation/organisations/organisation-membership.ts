@@ -1,4 +1,4 @@
-import type { AuthenticatedIdentity } from "../authentication/index.ts";
+import type { AuthenticatedIdentity } from "../authentication/authenticated-identity.ts";
 
 export type OrganisationRole = "member" | "owner";
 

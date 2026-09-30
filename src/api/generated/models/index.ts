@@ -12,6 +12,7 @@ export * from "./healthResponseService.ts";
 export * from "./healthResponseStatus.ts";
 export * from "./healthResponseVersion.ts";
 export * from "./problemDetail.ts";
+export * from "./problemDetailType.ts";
 export * from "./projectResponse.ts";
 export * from "./protectedFeatureResponse.ts";
 export * from "./protectedFeatureResponseCapability.ts";

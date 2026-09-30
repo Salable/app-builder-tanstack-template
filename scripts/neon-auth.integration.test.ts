@@ -113,8 +113,9 @@ describe("managed Neon authentication through the built application", () => {
       bob = new CookieJar();
     assert.equal(
       (
-        await call(alice, "/api/auth/sign-in/email", {
-          email: "alice@example.test",
+        await call(alice, "/api/auth/sign-up/email", {
+          name: "Alice Example",
+          email: "alice-isolated@example.test",
           password: "password-for-test",
         })
       ).status,
@@ -161,10 +162,61 @@ describe("managed Neon authentication through the built application", () => {
     assert.match(await (await call(bob, "/protected")).text(), /Bob Example/);
   });
 
+  it("presents provider unavailability through protected SSR and recovers without losing the session", async () => {
+    const jar = new CookieJar();
+    assert.equal(
+      (
+        await call(jar, "/api/auth/sign-up/email", {
+          name: "Outage User",
+          email: "outage@example.test",
+          password: "password-for-test",
+        })
+      ).status,
+      200,
+    );
+    provider.setAvailable(false);
+    try {
+      const page = await call(jar, "/protected");
+      assert.equal(page.status, 200);
+      const html = await page.text();
+      assert.match(html, /Identity service unavailable/);
+      assert.match(html, /sign-in service is temporarily unavailable/);
+      assert.match(html, /corr_[a-f0-9-]+/);
+      assert.doesNotMatch(html, /Signed in as|private provider outage/);
+      const api = await call(
+        jar,
+        "/api/v1/projects/550e8400-e29b-41d4-a716-446655440000/protected-feature",
+      );
+      assert.equal(api.status, 503);
+      const problem = (await api.json()) as {
+        status: number;
+        title: string;
+        detail: string;
+        code: string;
+      };
+      assert.equal(problem.status, 503);
+      assert.equal(problem.code, "IDENTITY_PROVIDER_UNAVAILABLE");
+      assert.doesNotMatch(JSON.stringify(problem), /private provider outage/);
+    } finally {
+      provider.setAvailable(true);
+    }
+    assert.match(await (await call(jar, "/protected")).text(), /Outage User/);
+  });
+
   it("keeps rejected credentials signed out and rejects cross-origin mutations", async () => {
+    assert.equal(
+      (
+        await call(new CookieJar(), "/api/auth/sign-up/email", {
+          name: "Credential Check",
+          email: "rejected@example.test",
+          password: "password-for-test",
+        })
+      ).status,
+      200,
+    );
     const jar = new CookieJar();
     const rejected = await call(jar, "/api/auth/sign-in/email", {
-      email: "alice@example.test",
+      email: "rejected@example.test",
       password: "wrong-password",
     });
     assert.equal(rejected.status, 401);

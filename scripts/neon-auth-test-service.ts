@@ -11,6 +11,7 @@ export async function startNeonAuthTestService() {
   const sessions = new Map<string, User>();
   const receivedCookies: string[] = [];
   let sequence = 0;
+  let available = true;
   const server = createServer((request, response) => {
     void handle(request, response).catch(() => {
       response.writeHead(500);
@@ -24,6 +25,7 @@ export async function startNeonAuthTestService() {
   const origin = `http://localhost:${address.port}`;
 
   async function handle(request: IncomingMessage, response: ServerResponse) {
+    if (!available) return reply(response, { message: "private provider outage" }, 503);
     const url = new URL(request.url!, origin);
     const cookie = request.headers.cookie ?? "";
     receivedCookies.push(cookie);
@@ -80,6 +82,9 @@ export async function startNeonAuthTestService() {
   return {
     origin,
     receivedCookies,
+    setAvailable(value: boolean) {
+      available = value;
+    },
     revokeSessions(email: string) {
       for (const [token, user] of sessions) {
         if (user.email === email) sessions.delete(token);

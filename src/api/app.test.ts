@@ -10,6 +10,7 @@ import {
 } from "../entitlements/entitlement-provider";
 import {
   IdentityConfigurationError,
+  IdentityProviderUnavailableError,
   setIdentityProviderForTesting,
 } from "../identity/identity-provider";
 import { setProjectRepositoryForTesting } from "../projects/repository-provider";
@@ -19,6 +20,7 @@ const projectId = "4a130ba5-ed6e-4ae5-bac8-1d73073fa94a";
 const organizationId = "596875ff-7396-46f2-8968-7d34b8871872";
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   setIdentityProviderForTesting(undefined);
   setProjectAccessRepositoryForTesting(undefined);
@@ -67,8 +69,8 @@ describe("generated application public API", () => {
   it("requires the exact current API version and returns correlation metadata", async () => {
     const missing = await publicApi.request("/api/v1/health");
     expect(missing.status).toBe(400);
-    expect(ProblemDetailSchema.parse(await missing.json()).type).toContain(
-      "unsupported-api-version",
+    expect(ProblemDetailSchema.parse(await missing.json()).code).toBe(
+      "UNSUPPORTED_API_VERSION",
     );
 
     const response = await publicApi.request("/api/v1/health", {
@@ -166,7 +168,8 @@ describe("generated application public API", () => {
     expect(ProblemDetailSchema.parse(await response.json())).toMatchObject({
       status: 503,
       title: "Service Unavailable",
-      type: expect.stringMatching(/\/identity-unavailable$/),
+      type: "about:blank",
+      code: "IDENTITY_CONFIGURATION_MISSING",
     });
     expect(
       getOpenApiDocument().paths?.["/api/v1/projects"]?.post?.responses?.["503"],
@@ -260,7 +263,8 @@ describe("generated application public API", () => {
     expect(response.status).toBe(403);
     expect(ProblemDetailSchema.parse(await response.json())).toMatchObject({
       status: 403,
-      title: "Entitlement required",
+      title: "Forbidden",
+      code: "ENTITLEMENT_REQUIRED",
     });
   });
 
@@ -281,6 +285,61 @@ describe("generated application public API", () => {
       projectId,
       status: "available",
     });
+  });
+
+  it.each([
+    [
+      new IdentityConfigurationError("private credential"),
+      503,
+      "IDENTITY_CONFIGURATION_MISSING",
+    ],
+    [new IdentityProviderUnavailableError(), 503, "IDENTITY_PROVIDER_UNAVAILABLE"],
+    [new Error("private upstream response"), 500, "INTERNAL"],
+  ] as const)("reports safe diagnostics for %s", async (failure, status, code) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    setIdentityProviderForTesting({
+      authenticate: async () => {
+        throw failure;
+      },
+    });
+
+    const response = await createProjectRequest();
+    const body = ProblemDetailSchema.parse(await response.json());
+
+    expect(response.status).toBe(status);
+    expect(body).toMatchObject({ type: "about:blank", code, status });
+    expect(response.headers.get("X-Correlation-ID")).toBe(body.correlationId);
+    expect(log).toHaveBeenCalledOnce();
+    expect(JSON.parse(log.mock.calls[0]![1] as string)).toEqual({
+      code,
+      status,
+      correlationId: body.correlationId,
+      instance: "/api/v1/projects",
+    });
+    expect(JSON.stringify([body, log.mock.calls])).not.toContain("private");
+  });
+
+  it("preserves an error response when its diagnostic sink fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {
+      throw new Error("sink failed");
+    });
+    setIdentityProviderForTesting({
+      authenticate: async () => {
+        throw new IdentityConfigurationError();
+      },
+    });
+    const response = await createProjectRequest();
+    expect(response.status).toBe(503);
+    expect(ProblemDetailSchema.parse(await response.json()).code).toBe(
+      "IDENTITY_CONFIGURATION_MISSING",
+    );
+  });
+
+  it("does not report ordinary authentication rejections as server failures", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    setIdentityProviderForTesting({ authenticate: async () => null });
+    expect((await createProjectRequest()).status).toBe(401);
+    expect(log).not.toHaveBeenCalled();
   });
 });
 

@@ -8,7 +8,7 @@ import {
 } from "@neondatabase/auth/server";
 import {
   AuthenticatedIdentitySchema,
-  IdentityConfigurationError,
+  IdentityProviderUnavailableError,
   type IdentityProvider,
 } from "./identity-provider";
 import type { NeonAuthRuntimeConfig } from "./neon-auth-config";
@@ -37,17 +37,28 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
           setCookie: () => undefined,
         }),
       });
-      const result = await auth.getSession({ query: { disableCookieCache: "true" } });
+      const result = await auth
+        .getSession({ query: { disableCookieCache: "true" } })
+        .catch(() => {
+          throw new IdentityProviderUnavailableError();
+        });
       if (result.error) {
-        throw new IdentityConfigurationError("The identity service is unavailable.");
+        throw new IdentityProviderUnavailableError();
       }
-      if (!result.data?.session || !result.data.user) return null;
-      return AuthenticatedIdentitySchema.parse({
+      if (result.data === null) return null;
+      if (!result.data?.session || !result.data.user) {
+        throw new IdentityProviderUnavailableError();
+      }
+      const identity = AuthenticatedIdentitySchema.safeParse({
         email: result.data.user.email,
         name: result.data.user.name,
         sessionId: result.data.session.id,
         userId: result.data.user.id,
       });
+      if (!identity.success) {
+        throw new IdentityProviderUnavailableError();
+      }
+      return identity.data;
     },
   };
 

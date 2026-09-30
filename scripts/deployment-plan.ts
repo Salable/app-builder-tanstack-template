@@ -1,6 +1,4 @@
 import { resolveApplicationOrigin } from "../src/runtime/application-origin";
-
-export type AppBuilderDeliveryStage = "DEVELOPMENT" | "PREVIEW" | "PRODUCTION";
 export type DeploymentScript = "migrate" | "build:vercel" | "check:deployment:built";
 
 /**

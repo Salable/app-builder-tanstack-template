@@ -3,6 +3,7 @@ import { publicApi } from "./api/app";
 import { getAuthenticationRuntime } from "./identity/auth-runtime";
 import { IdentityConfigurationError } from "./identity/identity-provider";
 import { canonicalApplicationRedirect } from "./runtime/application-origin";
+import { createProblemDetail, reportProblem } from "./api/problem-detail";
 
 export default createServerEntry({
   async fetch(request) {
@@ -15,18 +16,23 @@ export default createServerEntry({
         return await getAuthenticationRuntime().handler(request);
       } catch (error) {
         if (error instanceof IdentityConfigurationError) {
-          return Response.json(
-            {
-              detail: "The identity service is not available.",
-              status: 503,
-              title: "Service Unavailable",
-              type: "https://generated-app.salable.dev/problems/identity-unavailable",
+          const problem = createProblemDetail({
+            detail:
+              "The application's sign-in configuration is incomplete. Contact the application owner with this reference.",
+            status: 503,
+            code: "IDENTITY_CONFIGURATION_MISSING",
+            correlationId: `corr_${crypto.randomUUID()}`,
+            instance: pathname,
+          });
+          const response = Response.json(problem, {
+            headers: {
+              "Content-Type": "application/problem+json",
+              "X-Correlation-ID": problem.correlationId,
             },
-            {
-              headers: { "Content-Type": "application/problem+json" },
-              status: 503,
-            },
-          );
+            status: 503,
+          });
+          reportProblem(problem);
+          return response;
         }
         throw error;
       }

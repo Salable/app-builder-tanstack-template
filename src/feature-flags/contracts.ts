@@ -34,7 +34,7 @@ export const FeatureFlagEvaluationContextSchema = z
     attributes: z.record(z.string().max(100), z.string().max(500)).default({}),
   })
   .strict();
-export const RuntimeFeatureFlagValueSchema = z
+const RuntimeFeatureFlagValueSchema = z
   .object({
     key: FeatureFlagKeySchema,
     valueKind: FeatureFlagValueKindSchema,

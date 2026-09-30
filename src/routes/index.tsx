@@ -61,9 +61,15 @@ function Home() {
     },
   });
   useEffect(() => {
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const resolved = theme === "system" ? (prefersDark ? "dark" : "light") : theme;
-    document.documentElement.dataset.theme = resolved;
+    const preference = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      document.documentElement.dataset.theme =
+        theme === "system" ? (preference.matches ? "dark" : "light") : theme;
+    };
+    applyTheme();
+    if (theme !== "system") return;
+    preference.addEventListener("change", applyTheme);
+    return () => preference.removeEventListener("change", applyTheme);
   }, [theme]);
 
   return (
