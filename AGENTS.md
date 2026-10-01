@@ -9,6 +9,11 @@ concrete evidence and a requested outcome. Use `duplicateOfTaskId` when an exist
 ticket already owns that outcome, otherwise null. The
 project owner controls their priority.
 
+Authentication is an existing tested capability. Customise its page layout and
+navigation; reuse `AuthForm`, `SignOutButton`, the server identity boundary and
+the local auth fixtures. Add tests for the product's changes, not another auth
+implementation or test harness. See [auth customisation](README.md#auth-customisation).
+
 Keep functions readable as a recipe: validate inputs, process the request,
 finalise the result, then persist and return. Prefer atomic storage where partial
 writes would leave broken state. Keep business rules on the server and use the

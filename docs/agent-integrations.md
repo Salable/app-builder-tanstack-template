@@ -96,7 +96,7 @@ Preserve the SSR/session bridge; fix provider setup at its source.
 
 ## Database setup and tests
 
-Reuse `scripts/run-postgres-integration.ts`, its real PostgreSQL suite and the
+Reuse `scripts/run-with-test-database.ts`, its real PostgreSQL suite and the
 existing migration runner. Extend them for the ticket; do not recreate database
 bootstrap for each feature.
 
@@ -126,11 +126,12 @@ product owns generated-application database credentials. Agents never request or
 receive Vercel, Neon, Preview-database, Production-database, production-merge, or
 feature-flag management credentials.
 
-The standard email/password views and both authentication adapters are already
-implemented. Reuse `src/identity/auth-runtime.ts`, `/auth/sign-in`,
-`/auth/sign-up`, and the protected server identity boundary; adapt the product's
-presentation instead of replacing the cookie/session integration. Keep the
-managed HTTP integration tests green. Never instantiate a browser auth client
+The standard email/password views, both authentication adapters and their local
+browser/HTTP suites are already implemented. Follow
+[auth customisation](../README.md#auth-customisation): adapt `AuthPage`, reuse
+`AuthForm`, `SignOutButton`, `auth-runtime.ts` and the server identity boundary.
+Extend the existing fixtures for the changed product behaviour. Keep these
+regression suites green. Never instantiate a browser auth client
 per server request, forward unrelated cookies, cache authoritative session
 reads, or copy a compressed response header onto a decoded body.
 

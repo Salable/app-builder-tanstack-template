@@ -8,6 +8,8 @@ export default tseslint.config(
       ".output/**",
       ".vercel/**",
       "coverage/**",
+      "test-results/**",
+      "playwright-report/**",
       "node_modules/**",
       "openapi/openapi.json",
       "src/api/generated/**",

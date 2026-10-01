@@ -89,6 +89,15 @@ jobs:
           APP_BUILDER_TEST_DATABASE_URL: postgresql://postgres@127.0.0.1:5432/generated_app
           APP_BUILDER_TEST_DISPOSABLE_DATABASE: "1"
 
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Test authentication in desktop and mobile browsers
+        run: npm run test:browser
+        env:
+          APP_BUILDER_TEST_DATABASE_URL: postgresql://postgres@127.0.0.1:5432/generated_app
+          APP_BUILDER_TEST_DISPOSABLE_DATABASE: "1"
+
   production-build:
     runs-on: ubuntu-latest
     timeout-minutes: 20

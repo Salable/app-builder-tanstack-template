@@ -141,6 +141,32 @@ refresh, separate users, compressed provider responses, cookie filtering,
 sign-out, and revoked-session denial. It requires no hosted credentials and does
 not claim to verify a live Neon project's configuration.
 
+### Auth customisation
+
+Email/password auth is already implemented and covered by the local suite. Product
+work should change only what its requirements add:
+
+- Change `src/identity/auth-page.tsx` for branding, layout, links and the destination
+  after authentication. It composes `AuthForm`; keep credential submission, pending
+  state, hydration and error handling in that shared form.
+- Use `SignOutButton` with the product's `onSignedOut` navigation or router refresh.
+  Keep the singleton client, provider adapters, cookie bridge and server identity
+  checks. Add ownership, permissions and entitlements at the product's server boundary.
+- Extend `tests/browser/auth.spec.ts` and its `auth.fixture.ts` for product journeys.
+  The fixture runs the real built app with local Neon or real local PostgreSQL;
+  it can revoke sessions without mocking the application's auth implementation.
+  Adapt route/copy assertions when the UI changes; retain behaviour coverage.
+
+`npm run check` includes the desktop/mobile browser journeys for both auth modes.
+For a focused run after `npm run build`, use `npm run test:browser`. The shared
+`scripts/run-with-test-database.ts` accepts the worker's disposable database or
+starts a local container and always cleans it up. Workers use their preinstalled
+Chromium; on a new developer machine run `npx playwright install chromium` once.
+CI installs Chromium itself. No hosted credentials are needed.
+
+Adding a requested new sign-in method is separate feature work. Existing auth tests
+remain regression coverage; a styling ticket does not need a fresh auth audit.
+
 ### Managed Auth deployment configuration
 
 Use the native Neon integration's variables directly:

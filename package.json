@@ -8,7 +8,7 @@
     "build": "npm run generate && NODE_ENV=production vite build",
     "build:vercel": "NITRO_PRESET=vercel npm run build",
     "deploy:vercel": "node --import tsx scripts/deploy-vercel.ts",
-    "check": "npm run check:quality && npm run test:unit && npm run test:integration && npm run check:build",
+    "check": "npm run check:quality && npm run test:unit && npm run test:integration && npm run check:build && npm run test:browser",
     "check:build": "npm run build && npm run test:ssr && npm run build:vercel && npm run check:deployment:built",
     "check:quality": "npm run format:check && npm run lint && npm run typecheck && npm run check:feature-flags && npm run check:deployment && npm run generate:check",
     "check:deployment": "node --import tsx scripts/check-deployment-manifest.ts",
@@ -27,7 +27,8 @@
     "start": "node .output/server/index.mjs",
     "test": "npm run test:unit",
     "test:unit": "vitest run",
-    "test:integration": "node --import tsx scripts/run-postgres-integration.ts && node --import tsx --test scripts/neon-auth.integration.test.ts",
+    "test:integration": "node --import tsx scripts/run-with-test-database.ts node --import tsx --test scripts/postgres.integration.test.ts && node --import tsx --test scripts/neon-auth.integration.test.ts",
+    "test:browser": "node --import tsx scripts/run-with-test-database.ts playwright test",
     "test:ssr": "node --import tsx scripts/smoke-ssr.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -54,6 +55,7 @@
     "zustand": "5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "1.61.1",
     "@eslint/js": "9.39.5",
     "@tailwindcss/vite": "4.3.3",
     "@testing-library/dom": "^10.4.1",
