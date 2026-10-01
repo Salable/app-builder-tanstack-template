@@ -1,7 +1,8 @@
 # Agent guidance
 
-The ticket defines the work. Implement its smallest coherent outcome and preserve
-unrelated changes. Supporting project material is optional: inspect it when needed
+The ticket defines the work. Implement its smallest coherent outcome, remove code
+and tests made obsolete by that change, and preserve unrelated changes.
+Supporting project material is optional: inspect it when needed
 to understand or complete the ticket. Do not perform recurring setup, audits or
 unrelated improvements. Authors report concrete supplementary findings for automatic
 Backlog creation in `supplementaryFindings`, using a stable kebab-case finding key,
@@ -14,12 +15,20 @@ navigation; reuse `AuthForm`, `SignOutButton`, `SessionBoundary`, the server ide
 the local auth fixtures. Add tests for the product's changes, not another auth
 implementation or test harness. See [auth customisation](docs/development-guide.md#auth-customisation).
 
-Keep functions readable as a recipe: validate inputs, process the request,
-finalise the result, then persist and return. Prefer atomic storage where partial
-writes would leave broken state. Keep business rules on the server and use the
-existing API error contract: `about:blank`, a stable `code`, safe detail and a
-correlation ID. Use the shared problem helpers; distinguish missing configuration
-from provider outages and report server failures without secrets or provider bodies.
+Keep functions readable as a recipe: sanitise and validate inputs, process the
+request, finalise the result, transform if needed, then persist and return.
+Finish processing before storage where practical; use atomic writes when partial
+updates would leave broken state. Give each function a clear responsibility.
+
+Business rules and workflow progression belong on the server. The UI presents
+server state and permitted actions, collects intent and owns transient display
+state. Prefer one current contract and deterministic outcomes. Recovery should
+safely resume known work; avoid speculative retry and fallback layers.
+
+Use the shared error handling and API contract: `about:blank`, a stable `code`,
+safe detail and a correlation ID. Distinguish missing configuration from provider
+outages. Report failures without secrets or provider bodies; defer nonessential
+logging and tracking until after the response where the runtime supports it.
 
 ## Verification and completion
 
