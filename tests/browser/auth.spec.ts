@@ -102,9 +102,16 @@ for (const authMode of ["SELF_HOSTED_BETTER_AUTH", "NEON_AUTH"] as const) {
           body: await page.screenshot({ fullPage: true }),
           contentType: "image/png",
         });
+        const otherTab = await context.newPage();
+        await otherTab.goto(`${origin}/protected`);
+        await expectIdentity(otherTab, "Alice", aliceEmail);
+        // Native cross-tab notification must retire the old identity without reload.
         await page.getByRole("button", { name: "Sign out", exact: true }).click();
         await expect(
           page.getByRole("heading", { name: "Authentication required" }),
+        ).toBeVisible();
+        await expect(
+          otherTab.getByRole("heading", { name: "Authentication required" }),
         ).toBeVisible();
         await page.reload();
         await expect(
@@ -123,6 +130,8 @@ for (const authMode of ["SELF_HOSTED_BETTER_AUTH", "NEON_AUTH"] as const) {
         await page.getByRole("button", { name: "Sign in", exact: true }).click();
         await expect(page).toHaveURL(`${origin}/protected`);
         await expectIdentity(page, "Alice", aliceEmail);
+        await expectIdentity(otherTab, "Alice", aliceEmail);
+        await otherTab.close();
 
         await authApplication.revokeSessions(aliceEmail);
         await page.reload();

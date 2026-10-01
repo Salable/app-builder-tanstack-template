@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { SignOutButton } from "../identity/sign-out-button";
 import { getProtectedRouteIdentity } from "../identity/protected-route.functions";
 
@@ -9,7 +9,6 @@ export const Route = createFileRoute("/protected")({
 
 function ProtectedRoute() {
   const result = Route.useLoaderData();
-  const router = useRouter();
   return (
     <main className="min-h-screen bg-slate-50 px-5 py-10 text-slate-950">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
@@ -26,10 +25,7 @@ function ProtectedRoute() {
             <p className="mt-3 text-slate-700">
               Signed in as {result.identity.name} ({result.identity.email}).
             </p>
-            <SignOutButton
-              className="mt-5 rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white"
-              onSignedOut={() => router.invalidate()}
-            />
+            <SignOutButton className="mt-5 rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white" />
           </section>
         ) : result.status === "unauthenticated" ? (
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

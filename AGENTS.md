@@ -10,9 +10,9 @@ ticket already owns that outcome, otherwise null. The
 project owner controls their priority.
 
 Authentication is an existing tested capability. Customise its page layout and
-navigation; reuse `AuthForm`, `SignOutButton`, the server identity boundary and
+navigation; reuse `AuthForm`, `SignOutButton`, `SessionBoundary`, the server identity boundary and
 the local auth fixtures. Add tests for the product's changes, not another auth
-implementation or test harness. See [auth customisation](README.md#auth-customisation).
+implementation or test harness. See [auth customisation](docs/development-guide.md#auth-customisation).
 
 Keep functions readable as a recipe: validate inputs, process the request,
 finalise the result, then persist and return. Prefer atomic storage where partial
@@ -72,7 +72,8 @@ the names-only Preview/Production contract. Follow
 [runtime environments](docs/agent-integrations.md#runtime-environments); do not
 invent variables, credentials or domains.
 
-See [README](README.md) for project scripts and architecture and
+See [README](README.md) for the accepted product outline,
+[development guide](docs/development-guide.md) for scripts and architecture, and
 [task-specific integrations](docs/agent-integrations.md) for auth, application
 URLs, billing, migrations and product entry work. Dependency changes require the
 active feature, a lockfile update and a justification; no unsolicited advisory

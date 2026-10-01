@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { authClient } from "./auth-client";
+import { announceSessionChange } from "./session-changes";
 
 type AuthMode = "sign-in" | "sign-up";
 
@@ -44,6 +45,7 @@ export function AuthForm({
         return;
       }
       // Navigation belongs to the product; session establishment stays shared.
+      announceSessionChange();
       onAuthenticated();
     } catch {
       setError("We could not reach the identity service. Please try again.");

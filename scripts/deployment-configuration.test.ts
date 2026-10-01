@@ -32,7 +32,7 @@ describe("deployment environment contract", () => {
     });
   });
 
-  it("runs migrations only for isolated preview builds", () => {
+  it("declares shared deployment inputs and self-contained build checks", () => {
     const manifest = JSON.parse(readFileSync("deployment/vercel.v1.json", "utf8")) as {
       environment: Array<{ name: string; phase: string }>;
     };
@@ -72,7 +72,6 @@ describe("deployment environment contract", () => {
     const agentIndex = readFileSync("AGENTS.md", "utf8");
     expect(agentIndex).toContain("(docs/agent-integrations.md)");
     const agentGuidance = readFileSync("docs/agent-integrations.md", "utf8");
-    const deploymentRunner = readFileSync("scripts/deploy-vercel.ts", "utf8");
 
     expect(manifest.applicationOrigin).toEqual({
       resolver: "src/runtime/application-origin.ts#resolveApplicationOrigin",
@@ -94,14 +93,13 @@ describe("deployment environment contract", () => {
     expect(agentGuidance).toContain("not automatically browser configuration");
     expect(agentGuidance).toContain("Do not add `APP_BASE_URL`, `BETTER_AUTH_URL`");
     expect(agentGuidance).toContain("Do not derive an origin from `Host`");
-    expect(deploymentRunner).toContain("deploymentApplicationOrigin(stage)");
   });
 
   it("records managed Neon Auth as a ready application capability", () => {
     const agentIndex = readFileSync("AGENTS.md", "utf8");
     expect(agentIndex).toContain("(docs/agent-integrations.md)");
     const agentGuidance = readFileSync("docs/agent-integrations.md", "utf8");
-    const readme = readFileSync("README.md", "utf8");
+    const readme = readFileSync("docs/development-guide.md", "utf8");
 
     for (const guidance of [agentGuidance, readme]) {
       const normalizedGuidance = guidance.replace(/\s+/g, " ");

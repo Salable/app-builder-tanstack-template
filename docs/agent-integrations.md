@@ -91,7 +91,7 @@ Production modes. Trusted verification owns checks against actual deployments.
 Use integration-provided `NEON_AUTH_BASE_URL` (server), `VITE_NEON_AUTH_URL`
 (public client build), and database variables (server). Neon owns Preview branches,
 Auth endpoints, and trusted origins. For Auth or Preview changes, read
-[deployment configuration](../README.md#managed-auth-deployment-configuration).
+[deployment configuration](development-guide.md#managed-auth-deployment-configuration).
 Preserve the SSR/session bridge; fix provider setup at its source.
 
 ## Database setup and tests
@@ -116,6 +116,9 @@ bootstrap for each feature.
 
 Applied migration files are immutable. Add a new paired forward/rollback migration
 for schema changes and prove clean installation plus upgrade from the prior head.
+Vercel's Production build validates its output before applying the complete pending
+migration batch transactionally. Keep changes compatible with the still-running
+previous release and prove failed-batch rollback and safe retry locally.
 Hosted Neon configuration and verification remain platform-owned; local tests must
 never use Preview or Production databases.
 
@@ -128,8 +131,8 @@ feature-flag management credentials.
 
 The standard email/password views, both authentication adapters and their local
 browser/HTTP suites are already implemented. Follow
-[auth customisation](../README.md#auth-customisation): adapt `AuthPage`, reuse
-`AuthForm`, `SignOutButton`, `auth-runtime.ts` and the server identity boundary.
+[auth customisation](development-guide.md#auth-customisation): adapt `AuthPage`, reuse
+`AuthForm`, `SignOutButton`, `SessionBoundary`, `auth-runtime.ts` and the server identity boundary.
 Extend the existing fixtures for the changed product behaviour. Keep these
 regression suites green. Never instantiate a browser auth client
 per server request, forward unrelated cookies, cache authoritative session

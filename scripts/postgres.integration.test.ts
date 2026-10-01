@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import {
   ProblemDetailSchema,
@@ -90,7 +93,7 @@ before(async () => {
     ["app_builder_migrations", "foundation_seat_ledgers", "projects", "user"],
   );
   const deploymentEnvironment = { ...process.env };
-  delete deploymentEnvironment.DATABASE_URL;
+  deploymentEnvironment.DATABASE_URL = databaseUrl;
   deploymentEnvironment.APP_BUILDER_DELIVERY_STAGE = "PRODUCTION";
   deploymentEnvironment.VERCEL = "1";
   deploymentEnvironment.VERCEL_ENV = "production";
@@ -244,6 +247,74 @@ after(async () => {
 });
 
 describe("generated application PostgreSQL boundary", () => {
+  it("preserves existing data when a pending batch fails, then upgrades and retries safely", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "starter-migration-upgrade-"));
+    await cp("migrations", directory, { recursive: true });
+    await database.query("CREATE TABLE migration_probe (value text NOT NULL)");
+    await database.query("INSERT INTO migration_probe VALUES ('retained')");
+    try {
+      await writeFile(
+        join(directory, "0002_probe.up.sql"),
+        "ALTER TABLE migration_probe ADD COLUMN upgraded boolean NOT NULL DEFAULT true;",
+      );
+      await writeFile(
+        join(directory, "0002_probe.down.sql"),
+        "ALTER TABLE migration_probe DROP COLUMN upgraded;",
+      );
+      await writeFile(
+        join(directory, "0003_probe.up.sql"),
+        "UPDATE migration_probe SET value = 'changed'; SELECT 1 / 0;",
+      );
+      await writeFile(
+        join(directory, "0003_probe.down.sql"),
+        "UPDATE migration_probe SET value = 'retained';",
+      );
+
+      await assert.rejects(migrateToLatest(database, directory), /division by zero/);
+      assert.deepEqual((await database.query("SELECT * FROM migration_probe")).rows, [
+        { value: "retained" },
+      ]);
+      assert.deepEqual(
+        (
+          await database.query(
+            "SELECT version FROM app_builder_migrations ORDER BY version",
+          )
+        ).rows,
+        [{ version: "0001" }],
+      );
+
+      // This file was never applied; replacing the failing candidate is safe.
+      await writeFile(
+        join(directory, "0003_probe.up.sql"),
+        "UPDATE migration_probe SET value = 'changed';",
+      );
+      const applied = await migrateToLatest(database, directory);
+      assert.deepEqual(
+        applied.map(({ version }) => version),
+        ["0001", "0002", "0003"],
+      );
+      assert.deepEqual((await database.query("SELECT * FROM migration_probe")).rows, [
+        { value: "changed", upgraded: true },
+      ]);
+      assert.deepEqual(await migrateToLatest(database, directory), applied);
+
+      await writeFile(join(directory, "0003_probe.up.sql"), "SELECT 1;");
+      await assert.rejects(migrateToLatest(database, directory), /0003 was modified/);
+      await writeFile(
+        join(directory, "0003_probe.up.sql"),
+        "UPDATE migration_probe SET value = 'changed';",
+      );
+      await rollbackLastMigration(database, directory);
+      await rollbackLastMigration(database, directory);
+      assert.deepEqual((await database.query("SELECT * FROM migration_probe")).rows, [
+        { value: "retained" },
+      ]);
+    } finally {
+      await database.query("DROP TABLE migration_probe");
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it("rehearses transactional rollback and forward recovery", async () => {
     const migrations = await database.query<{ version: string }>(
       "SELECT version FROM app_builder_migrations ORDER BY version",

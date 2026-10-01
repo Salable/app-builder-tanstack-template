@@ -94,6 +94,17 @@ const DeploymentManifestSchema = z
         runWhen: z.literal("PREVIEW"),
       })
       .strict(),
+    productionMigration: z
+      .object({
+        command: z.literal("npm run migrate"),
+        stageVariable: z.literal("APP_BUILDER_DELIVERY_STAGE"),
+        runWhen: z.literal("PRODUCTION"),
+        after: z.tuple([
+          z.literal("build:vercel"),
+          z.literal("check:deployment:built"),
+        ]),
+      })
+      .strict(),
   })
   .strict();
 

@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { RouterContext } from "../router";
+import { SessionBoundary } from "../identity/session-boundary";
 import "../styles.css";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -33,7 +34,9 @@ function RootComponent() {
   return (
     <RootDocument>
       <QueryClientProvider client={queryClient}>
-        <Outlet />
+        <SessionBoundary>
+          <Outlet />
+        </SessionBoundary>
       </QueryClientProvider>
     </RootDocument>
   );

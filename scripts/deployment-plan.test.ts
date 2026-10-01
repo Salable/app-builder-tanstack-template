@@ -18,10 +18,11 @@ describe("Vercel deployment plan", () => {
     ]);
   });
 
-  it("does not grant Production database-migration authority", () => {
+  it("migrates Production after validating the built output", () => {
     expect(deploymentScripts("PRODUCTION")).toEqual([
       "build:vercel",
       "check:deployment:built",
+      "migrate",
     ]);
   });
 

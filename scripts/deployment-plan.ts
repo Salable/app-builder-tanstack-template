@@ -2,9 +2,8 @@ import { resolveApplicationOrigin } from "../src/runtime/application-origin";
 export type DeploymentScript = "migrate" | "build:vercel" | "check:deployment:built";
 
 /**
- * Development and Preview migrations run inside Vercel's provider-owned build.
- * The phase-one production command is a source merge only, so Production builds
- * deliberately do not receive database-migration authority.
+ * Vercel runs migrations using the deployment's own Neon credentials.
+ * Production validates the built output before changing its database.
  */
 export function deploymentScripts(
   value: string | undefined,
@@ -13,7 +12,7 @@ export function deploymentScripts(
     return ["migrate", "build:vercel", "check:deployment:built"];
   }
   if (value === "PRODUCTION") {
-    return ["build:vercel", "check:deployment:built"];
+    return ["build:vercel", "check:deployment:built", "migrate"];
   }
   throw new Error(
     "APP_BUILDER_DELIVERY_STAGE must be DEVELOPMENT, PREVIEW, or PRODUCTION for a Vercel deployment.",

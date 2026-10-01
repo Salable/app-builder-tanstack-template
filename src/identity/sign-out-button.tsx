@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { authClient } from "./auth-client";
+import { announceSessionChange } from "./session-changes";
 
 export function SignOutButton({
   onSignedOut,
   className,
 }: {
-  onSignedOut: () => void | Promise<void>;
+  onSignedOut?: () => void | Promise<void>;
   className?: string;
 }) {
   const [pending, setPending] = useState(false);
@@ -20,7 +21,8 @@ export function SignOutButton({
         setError("Sign-out failed. Please try again.");
         return;
       }
-      await onSignedOut();
+      announceSessionChange();
+      await onSignedOut?.();
     } catch {
       setError("Sign-out failed. Please try again.");
     } finally {

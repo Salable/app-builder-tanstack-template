@@ -127,5 +127,11 @@
     "command": "npm run migrate",
     "stageVariable": "APP_BUILDER_DELIVERY_STAGE",
     "runWhen": "PREVIEW"
+  },
+  "productionMigration": {
+    "command": "npm run migrate",
+    "stageVariable": "APP_BUILDER_DELIVERY_STAGE",
+    "runWhen": "PRODUCTION",
+    "after": ["build:vercel", "check:deployment:built"]
   }
 }
