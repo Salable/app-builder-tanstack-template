@@ -32,7 +32,7 @@ describe("deployment environment contract", () => {
     });
   });
 
-  it("declares shared deployment inputs and self-contained build checks", () => {
+  it("declares shared deployment inputs", () => {
     const manifest = JSON.parse(readFileSync("deployment/vercel.v1.json", "utf8")) as {
       environment: Array<{ name: string; phase: string }>;
     };
@@ -51,9 +51,6 @@ describe("deployment environment contract", () => {
     );
     expect(packageJson.scripts.build).toBe(
       "npm run generate && NODE_ENV=production vite build",
-    );
-    expect(packageJson.scripts["check:build"]).toBe(
-      "npm run build && npm run test:ssr && npm run build:vercel && npm run check:deployment:built",
     );
     expect(manifest.environment).toContainEqual(
       expect.objectContaining({

@@ -114,8 +114,11 @@ bootstrap for each feature.
   container paths. Run the real fresh-container check on a Docker-capable local/CI
   host; workers can mock only the external process boundary for that path.
 
-Applied migration files are immutable. Add a new paired forward/rollback migration
-for schema changes and prove clean installation plus upgrade from the prior head.
+Published migration files are immutable, including migrations introduced earlier
+on the same PR. Restore edits/deletions from the assigned source head; add a new
+paired forward/rollback migration and prove clean installation plus upgrade from
+that original history with existing data. The trusted worker checks this before
+publication and returns violations to the same author session for repair.
 Vercel's Production build validates its output before applying the complete pending
 migration batch transactionally. Keep changes compatible with the still-running
 previous release and prove failed-batch rollback and safe retry locally.
