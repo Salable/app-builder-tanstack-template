@@ -38,7 +38,7 @@ GitHub, Vercel and Neon at their external boundaries. Include integration covera
 where practical and a browser happy path plus a representative visible error.
 Do not add tests that only assert their own fixtures or repeat implementation.
 
-Run the complete `npm run check` on the final worktree, sequentially and without
+Authors run the complete `npm run check` on the final worktree, sequentially and without
 running its constituents concurrently. Use focused checks to diagnose failures.
 Do not repeat an unchanged failed command without a new hypothesis. Authors return
 `COMPLETED` for delivered work with green local checks. If work remains incomplete,
@@ -53,9 +53,10 @@ ticket or historical instructions. Required Salable Test Mode catalog setup is
 implementation within a billing ticket, as described in the reference below.
 
 Reviewers assess the ticket and introduced regressions independently, keeping
-tracked source and Git state unchanged. Run the authoritative local aggregate
-once, without concurrent constituents. Required missing files are in-scope
-implementation defects even when absent from the diff. Concrete out-of-scope
+tracked source and Git state unchanged. Read the supplied completed GitHub Actions
+evidence in `reviews/input.json`; do not install dependencies, run tests/builds,
+reproduce failures or retry CI. Required missing files are in-scope implementation
+defects even when absent from the diff. Concrete out-of-scope
 findings become non-blocking Backlog requests; do not turn them into active-ticket
 repairs or search the whole project for supplementary work.
 
@@ -87,3 +88,9 @@ See [README](README.md) for the accepted product outline,
 URLs, billing, migrations and product entry work. Dependency changes require the
 active feature, a lockfile update and a justification; no unsolicited advisory
 remediation or audit gate.
+
+GitHub Actions owns independent verification: `.github/workflows/ci.yml` runs the
+`app-builder/ci` job on the exact PR head, with `npm run check` in the
+`Run complete suite` step. Use local fixtures and a read-only GitHub token, no
+application secrets. Restore this workflow in the foundation ticket if the clone
+omitted it.
