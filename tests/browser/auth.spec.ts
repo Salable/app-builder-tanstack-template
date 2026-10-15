@@ -7,6 +7,30 @@ const password = "Isolated-browser-password-2026!";
 for (const authMode of ["SELF_HOSTED_BETTER_AUTH", "NEON_AUTH"] as const) {
   test.describe(authMode, () => {
     test.use({ authMode });
+    test("presents the neutral landing and account skeletons", async ({
+      page,
+      authApplication,
+    }) => {
+      await page.goto(authApplication.origin);
+      await expect(
+        page.getByRole("heading", { name: "Landing page", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("This is the public entry point", { exact: false }),
+      ).toContainText("App Builder will replace");
+      await expect(page.locator("main form")).toHaveCount(0);
+      await page.getByRole("link", { name: "Create an account", exact: true }).click();
+      await expect(
+        page.getByRole("heading", { name: "Create your account", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Use this form to create an account.", { exact: true }),
+      ).toBeVisible();
+      await page.getByRole("link", { name: "Sign in", exact: true }).click();
+      await expect(
+        page.getByText("Use this form to access the application.", { exact: true }),
+      ).toBeVisible();
+    });
     test("waits for hydration before accepting credentials and shows a rejected sign-in", async ({
       page,
       authApplication,
@@ -73,7 +97,7 @@ for (const authMode of ["SELF_HOSTED_BETTER_AUTH", "NEON_AUTH"] as const) {
       try {
         await page.goto(`${origin}/protected`);
         await expect(
-          page.getByRole("heading", { name: "Authentication required" }),
+          page.getByRole("heading", { name: "Sign in required" }),
         ).toBeVisible();
         await Promise.all([
           register(page, origin, "Alice", aliceEmail),
@@ -108,14 +132,14 @@ for (const authMode of ["SELF_HOSTED_BETTER_AUTH", "NEON_AUTH"] as const) {
         // Native cross-tab notification must retire the old identity without reload.
         await page.getByRole("button", { name: "Sign out", exact: true }).click();
         await expect(
-          page.getByRole("heading", { name: "Authentication required" }),
+          page.getByRole("heading", { name: "Sign in required" }),
         ).toBeVisible();
         await expect(
-          otherTab.getByRole("heading", { name: "Authentication required" }),
+          otherTab.getByRole("heading", { name: "Sign in required" }),
         ).toBeVisible();
         await page.reload();
         await expect(
-          page.getByRole("heading", { name: "Authentication required" }),
+          page.getByRole("heading", { name: "Sign in required" }),
         ).toBeVisible();
         await bob.reload();
         await expectIdentity(bob, "Bob", bobEmail);
@@ -136,7 +160,7 @@ for (const authMode of ["SELF_HOSTED_BETTER_AUTH", "NEON_AUTH"] as const) {
         await authApplication.revokeSessions(aliceEmail);
         await page.reload();
         await expect(
-          page.getByRole("heading", { name: "Authentication required" }),
+          page.getByRole("heading", { name: "Sign in required" }),
         ).toBeVisible();
         const privateApi = await context.request.get(
           `${origin}/api/v1/projects/550e8400-e29b-41d4-a716-446655440000/protected-feature`,
@@ -147,7 +171,7 @@ for (const authMode of ["SELF_HOSTED_BETTER_AUTH", "NEON_AUTH"] as const) {
         await expectIdentity(bob, "Bob", bobEmail);
         await bob.getByRole("button", { name: "Sign out", exact: true }).click();
         await expect(
-          bob.getByRole("heading", { name: "Authentication required" }),
+          bob.getByRole("heading", { name: "Sign in required" }),
         ).toBeVisible();
         expect(errors).toEqual([]);
       } finally {
@@ -165,6 +189,12 @@ async function register(page: Page, origin: string, name: string, email: string)
   await page.getByRole("button", { name: "Create your account", exact: true }).click();
   await expect(page).toHaveURL(`${origin}/protected`);
   await expectIdentity(page, name, email);
+  await expect(
+    page.getByRole("heading", { name: "Application", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("This is the signed-in area", { exact: false }),
+  ).toContainText("App Builder will replace");
 }
 
 async function expectIdentity(page: Page, name: string, email: string) {

@@ -42,6 +42,11 @@ keys or perform Live Mode mutations.
 
 ## Product entry experience
 
+The landing, sign-in, sign-up and signed-in pages are a matching neutral explainer
+across both starter stacks. Initial product tasks must replace all placeholder
+copy, branding and presentation, including auth-page presentation, while reusing
+the tested identity/session behavior. The skeleton does not define an app idea.
+
 The starter homepage is installation scaffolding. Initial product delivery must
 replace it with a designed, product-specific landing page, including the accepted
 value proposition, primary action, account navigation, and public pricing when

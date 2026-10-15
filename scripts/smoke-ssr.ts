@@ -35,7 +35,7 @@ const startupError = new Promise<never>((_resolve, reject) => {
 try {
   const page = await waitForResponse("/");
   assert.equal(page.status, 200, output.join(""));
-  assert.match(await page.text(), /TanStack Starter/);
+  assert.match(await page.text(), /Landing page/);
 
   const health = await waitForResponse("/api/v1/health", {
     headers: { "API-Version": "1" },
@@ -58,14 +58,14 @@ try {
   const protectedPage = await waitForResponse("/protected");
   assert.equal(protectedPage.status, 200);
   const protectedMarkup = await protectedPage.text();
-  assert.match(protectedMarkup, /Authentication required/);
+  assert.match(protectedMarkup, /Sign in required/);
   assert.doesNotMatch(protectedMarkup, /Sign in with/);
 
   const staleCookiePage = await waitForResponse("/protected", {
     headers: { Cookie: "generated-app.session_token=stale" },
   });
   assert.equal(staleCookiePage.status, 200);
-  assert.match(await staleCookiePage.text(), /Identity service unavailable/);
+  assert.match(await staleCookiePage.text(), /Sign-in service unavailable/);
 
   const unconfiguredAuth = await waitForResponse("/api/auth/get-session");
   assert.equal(unconfiguredAuth.status, 503);

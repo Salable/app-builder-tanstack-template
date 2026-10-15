@@ -1,17 +1,19 @@
 # TanStack Start generated-application template
 
-This isolated workspace is the generated customer-application golden-path
-spike. It uses TanStack Start SSR, Hono for every public API route, Tailwind,
-Base UI wrappers, React Hook Form/Zod, TanStack Query, bounded client-only
-Zustand state, Better Auth, OpenAPI 3.1, and an Orval-generated fetch/Query
-client.
+This standalone starter uses TanStack Start SSR, Hono for public API routes,
+Tailwind, React Hook Form/Zod, TanStack Query, Better Auth, OpenAPI 3.1 and an
+Orval-generated fetch/Query client. Base UI and Zustand are available for
+product tasks that need components or client-only state.
 
-The deployed root page is intentionally a neutral readiness shell. It contains no
-sample product, editable demo form, seeded customer data, or domain-specific call to
-action. App Builder plans against this repository after connection and replaces that
-shell with the requested product. The API, identity, organization, entitlement,
-feature-flag, PostgreSQL, and deployment code below are reusable implementation seams,
-not an example application presented to the end user.
+The public landing page, sign-in, sign-up and signed-in application area are neutral
+skeletons with the same explainer content as the Angular/NestJS starter. App Builder
+tasks replace all starter content and design while reusing the tested auth and
+infrastructure. The skeleton does not define an app idea, present feature demos,
+or require a health request before displaying its content.
+
+Server API, identity, organization, entitlement, feature-flag, PostgreSQL and
+deployment support remain implementation infrastructure. They do not determine
+the product's views, features or billing model.
 
 Run `npm ci` and `npm run check` for the complete local suite, or `npm run dev`
 for local development. See the [development guide](docs/development-guide.md)

@@ -54,8 +54,6 @@ export function AuthForm({
     }
   }
 
-  const inputClass =
-    "mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950";
   return (
     <form
       className={className}
@@ -66,10 +64,9 @@ export function AuthForm({
       aria-busy={disabled}
     >
       {signingUp && (
-        <label className="block font-medium">
+        <label>
           Name
           <input
-            className={inputClass}
             name="name"
             autoComplete="name"
             maxLength={200}
@@ -78,10 +75,9 @@ export function AuthForm({
           />
         </label>
       )}
-      <label className="block font-medium">
+      <label>
         Email
         <input
-          className={inputClass}
           type="email"
           name="email"
           autoComplete="email"
@@ -89,10 +85,9 @@ export function AuthForm({
           disabled={disabled}
         />
       </label>
-      <label className="block font-medium">
+      <label>
         Password
         <input
-          className={inputClass}
           type="password"
           name="password"
           autoComplete={signingUp ? "new-password" : "current-password"}
@@ -102,15 +97,11 @@ export function AuthForm({
         />
       </label>
       {error && (
-        <p className="text-red-700" role="alert">
+        <p className="error" role="alert">
           {error}
         </p>
       )}
-      <button
-        className="w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white disabled:opacity-60"
-        type="submit"
-        disabled={disabled}
-      >
+      <button type="submit" disabled={disabled}>
         {pending ? "Please wait…" : title}
       </button>
     </form>

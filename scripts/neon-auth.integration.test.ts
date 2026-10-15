@@ -144,16 +144,10 @@ describe("managed Neon authentication through the built application", () => {
     const signedOut = await call(alice, "/api/auth/sign-out", {});
     assert.equal(signedOut.status, 200);
     assert.doesNotMatch(await alice.getCookieString(origin), /neon-auth/);
-    assert.match(
-      await (await call(alice, "/protected")).text(),
-      /Authentication required/,
-    );
+    assert.match(await (await call(alice, "/protected")).text(), /Sign in required/);
     // A still-signed cache cookie cannot revive the now-revoked server session.
     assert.equal(await (await call(stale, "/api/auth/get-session")).json(), null);
-    assert.match(
-      await (await call(stale, "/protected")).text(),
-      /Authentication required/,
-    );
+    assert.match(await (await call(stale, "/protected")).text(), /Sign in required/);
     const privateApi = await call(
       stale,
       "/api/v1/projects/550e8400-e29b-41d4-a716-446655440000/protected-feature",
@@ -179,7 +173,7 @@ describe("managed Neon authentication through the built application", () => {
       const page = await call(jar, "/protected");
       assert.equal(page.status, 200);
       const html = await page.text();
-      assert.match(html, /Identity service unavailable/);
+      assert.match(html, /Sign-in service unavailable/);
       assert.match(html, /sign-in service is temporarily unavailable/);
       assert.match(html, /corr_[a-f0-9-]+/);
       assert.doesNotMatch(html, /Signed in as|private provider outage/);

@@ -1,6 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
   HeadContent,
+  Link,
   Outlet,
   Scripts,
   createRootRouteWithContext,
@@ -21,10 +22,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         name: "viewport",
       },
       {
-        content: "A production-readiness proof for App Builder generated applications.",
+        content:
+          "A starter skeleton. App Builder tasks replace its content and design.",
         name: "description",
       },
-      { title: "App Builder Starter" },
+      { title: "App Builder starter" },
     ],
   }),
 });
@@ -35,7 +37,16 @@ function RootComponent() {
     <RootDocument>
       <QueryClientProvider client={queryClient}>
         <SessionBoundary>
-          <Outlet />
+          <header>
+            <Link className="brand" to="/">
+              App Builder starter
+            </Link>
+            <Link to="/protected">Application</Link>
+          </header>
+          <main>
+            <Outlet />
+          </main>
+          <footer>Starter content — replaced by your App Builder tasks.</footer>
         </SessionBoundary>
       </QueryClientProvider>
     </RootDocument>

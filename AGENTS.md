@@ -1,5 +1,10 @@
 # Agent guidance
 
+The landing, sign-in, sign-up and signed-in views are neutral starter skeletons.
+Product tickets replace all starter copy, branding and presentation with the
+accepted product design; retain the tested authentication behavior underneath.
+Do not preserve the explainer as a finished product or invent features from it.
+
 The ticket defines the work. Implement its smallest coherent outcome, remove code
 and tests made obsolete by that change, and preserve unrelated changes.
 Supporting project material is optional: inspect it when needed

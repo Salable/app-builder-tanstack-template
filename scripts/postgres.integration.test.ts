@@ -656,9 +656,9 @@ describe("generated application PostgreSQL boundary", () => {
     });
     assert.equal(protectedPage.status, 200);
     const protectedMarkup = await protectedPage.text();
-    assert.match(protectedMarkup, /Authenticated identity/);
+    assert.match(protectedMarkup, /Signed in as/);
     assert.match(protectedMarkup, /Alice Owner/);
-    assert.doesNotMatch(protectedMarkup, /Authentication required/);
+    assert.doesNotMatch(protectedMarkup, /Sign in required/);
 
     await database.query(`DELETE FROM "session" WHERE "userId" = $1`, [alice.userId]);
     await assertProblem(
