@@ -6,6 +6,27 @@ import { describe, expect, it } from "vitest";
 import { createEntitlementProvider } from "../src/entitlements/entitlement-provider";
 
 describe("deployment environment contract", () => {
+  it("publishes the patched server-function transport required by CVE-2026-102989", () => {
+    const lockfile = JSON.parse(readFileSync("package-lock.json", "utf8")) as {
+      packages: Record<string, { version?: string }>;
+    };
+    for (const [name, minimum] of [
+      ["@tanstack/react-start", "1.168.60"],
+      ["@tanstack/start-server-core", "1.169.39"],
+    ] as const) {
+      const resolutions = Object.entries(lockfile.packages).filter(([location]) =>
+        location.endsWith(`node_modules/${name}`),
+      );
+      expect(resolutions.length).toBeGreaterThan(0);
+      for (const [, { version }] of resolutions) {
+        expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+        expect(
+          version!.localeCompare(minimum, "en", { numeric: true }),
+        ).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
   it("declares native Deploy Button ownership and Neon provisioning", () => {
     const manifest = JSON.parse(readFileSync("deployment/vercel.v1.json", "utf8")) as {
       installation: {
