@@ -281,6 +281,8 @@ Builder. Before the first deployment, the required App Builder Vercel integratio
 supplies `BETTER_AUTH_SECRET` and the environment-scoped App Builder runtime
 values. Application origins come directly from Vercel's exposed system variables,
 not integration-owned aliases. The Better Auth secret does not override a verified
-Neon Auth selection or authorize a sign-in method. To enable protected insights, set
-the optional `APP_BUILDER_ENTITLED_ORGANIZATION_IDS` variable to a comma-separated
-list of organization UUIDs; omission grants that capability to no organization.
+Neon Auth selection or authorize a sign-in method. The neutral starter has no
+configured commercial entitlement provider. Its protected example returns a safe
+503 until the product's billing implementation supplies authoritative Salable
+checks. Environment allowlists cannot grant production access. The fake provider
+and `APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS` are local-test fixtures only.

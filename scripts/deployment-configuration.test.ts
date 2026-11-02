@@ -1,9 +1,19 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createEntitlementProvider } from "../src/entitlements/entitlement-provider";
+import {
+  createEntitlementProvider,
+  EntitlementProviderUnavailableError,
+} from "../src/entitlements/entitlement-provider";
 
 describe("deployment environment contract", () => {
   it("publishes the patched server-function transport required by CVE-2026-102989", () => {
@@ -181,7 +191,7 @@ describe("deployment environment contract", () => {
     });
   });
 
-  it("can enable protected insights using only a declared production variable", async () => {
+  it("cannot grant protected access from any declared production variable", async () => {
     const manifest = JSON.parse(readFileSync("deployment/vercel.v1.json", "utf8")) as {
       environment: Array<{ name: string; required: boolean }>;
     };
@@ -194,7 +204,12 @@ describe("deployment environment contract", () => {
     );
 
     expect(
-      await createEntitlementProvider({
+      manifest.environment.some(({ name }) =>
+        name.includes("ENTITLED_ORGANIZATION_IDS"),
+      ),
+    ).toBe(false);
+    await expect(
+      createEntitlementProvider({
         ...declaredEnvironment,
         NODE_ENV: "production",
       }).hasEntitlement({
@@ -202,7 +217,47 @@ describe("deployment environment contract", () => {
         organizationId,
         userId: "deployment-test-user",
       }),
-    ).toBe(true);
+    ).rejects.toThrow(EntitlementProviderUnavailableError);
+  });
+
+  it.each([
+    "APP_BUILDER_ENTITLED_ORGANIZATION_IDS",
+    "APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS",
+  ])("rejects restoring %s to the deployment contract", (name) => {
+    const directory = mkdtempSync(join(tmpdir(), "entitlement-deployment-"));
+    try {
+      mkdirSync(join(directory, "deployment"));
+      for (const file of ["package.json", "vercel.json"])
+        copyFileSync(file, join(directory, file));
+      const manifest = JSON.parse(readFileSync("deployment/vercel.v1.json", "utf8"));
+      manifest.environment.push({
+        name,
+        required: false,
+        secret: false,
+        source: "user",
+        phase: "runtime",
+      });
+      writeFileSync(
+        join(directory, "deployment/vercel.v1.json"),
+        JSON.stringify(manifest),
+      );
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--import",
+          import.meta.resolve("tsx"),
+          resolve("scripts/check-deployment-manifest.ts"),
+        ],
+        { cwd: directory, encoding: "utf8" },
+      );
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        `must not configure redundant or unrequested variable ${name}`,
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it.each([

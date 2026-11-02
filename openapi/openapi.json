@@ -405,7 +405,7 @@
                 }
               }
             },
-            "description": "The identity boundary is not configured."
+            "description": "The identity or entitlement provider is unavailable."
           }
         },
         "tags": [

@@ -8,7 +8,7 @@
     "build": "npm run generate && NODE_ENV=production vite build",
     "build:vercel": "NITRO_PRESET=vercel npm run build",
     "deploy:vercel": "node --import tsx scripts/deploy-vercel.ts",
-    "check": "npm run check:quality && npm run test:unit && npm run test:integration && npm run test:ssr && npm run check:deployment:built && npm run test:browser",
+    "check": "npm run check:commercial && npm run check:quality && npm run test:unit && npm run test:integration && npm run test:ssr && npm run check:deployment:built && npm run test:browser",
     "check:build": "npm run build && npm run test:ssr && NITRO_PRESET=vercel NODE_ENV=production vite build && npm run check:deployment:built",
     "check:quality": "npm run format:check && npm run lint && npm run typecheck && npm run check:feature-flags && npm run check:deployment && npm run generate:check",
     "check:deployment": "node --import tsx scripts/check-deployment-manifest.ts",
@@ -30,7 +30,8 @@
     "test:integration": "node --import tsx scripts/run-with-test-database.ts node --import tsx --test scripts/postgres.integration.test.ts && node --import tsx --test scripts/neon-auth.integration.test.ts",
     "test:browser": "node --import tsx scripts/run-with-test-database.ts playwright test",
     "test:ssr": "node --import tsx scripts/smoke-ssr.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:commercial": "node scripts/check-commercial.mjs"
   },
   "engines": {
     "node": ">=24.15.0",

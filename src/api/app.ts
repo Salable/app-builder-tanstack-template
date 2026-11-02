@@ -15,6 +15,7 @@ import {
 } from "./contracts";
 import { getProjectAccessRepository } from "../authorization/project-access";
 import {
+  EntitlementProviderUnavailableError,
   getEntitlementProvider,
   PROTECTED_INSIGHTS_CAPABILITY,
 } from "../entitlements/entitlement-provider";
@@ -276,7 +277,7 @@ const protectedFeatureRoute = createRoute({
           schema: ProblemDetailSchema,
         },
       },
-      description: "The identity boundary is not configured.",
+      description: "The identity or entitlement provider is unavailable.",
     },
   },
   tags: ["projects"],
@@ -337,6 +338,13 @@ publicApi.notFound((context) =>
 );
 
 publicApi.onError((error, context) => {
+  if (error instanceof EntitlementProviderUnavailableError) {
+    return problem(context, {
+      detail: "Access could not be verified. Please retry later.",
+      status: 503,
+      code: "ENTITLEMENT_PROVIDER_UNAVAILABLE",
+    });
+  }
   if (error instanceof IdentityConfigurationError) {
     return problem(context, {
       detail:
