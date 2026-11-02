@@ -152,6 +152,8 @@ for (const forbiddenEnvironmentVariable of [
   "BETTER_AUTH_URL",
   "GITHUB_APP_CLIENT_ID",
   "GITHUB_APP_CLIENT_SECRET",
+  "APP_BUILDER_ENTITLED_ORGANIZATION_IDS",
+  "APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS",
 ]) {
   if (variableNames.includes(forbiddenEnvironmentVariable)) {
     throw new Error(
@@ -216,19 +218,6 @@ if (
 ) {
   throw new Error(
     "Preview migration requires a generated non-secret build/runtime stage.",
-  );
-}
-
-const entitlementVariable = manifest.environment.find(
-  ({ name }) => name === "APP_BUILDER_ENTITLED_ORGANIZATION_IDS",
-);
-if (
-  entitlementVariable?.required !== false ||
-  entitlementVariable.secret !== false ||
-  entitlementVariable.source !== "user"
-) {
-  throw new Error(
-    "Deployment manifest must declare optional APP_BUILDER_ENTITLED_ORGANIZATION_IDS user configuration.",
   );
 }
 

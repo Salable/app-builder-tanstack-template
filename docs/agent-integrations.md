@@ -31,6 +31,12 @@ never read Preview/Production database or deployment credentials into a worker.
 
 ## Salable Test Mode billing
 
+Follow the [monetisation playbook](monetisation.md) and pinned Salable skills for
+the approved commercial model, subscription lifecycle, entitlement access and
+application-owned regression tests. Keep `.salable/requirements.json` aligned with
+the approved agreement. `npm run check:commercial` validates the repository
+bindings; `npm run check` executes the application suite in GitHub as well as locally.
+
 Required Salable Test Mode catalog setup is coding work, not hosted QA. Within
 approved billing scope, use the supplied project credentials and `salable-design`
 to call the API directly, create the required resources, read them back by ID,

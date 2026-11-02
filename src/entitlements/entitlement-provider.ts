@@ -10,6 +10,19 @@ export interface EntitlementProvider {
   hasEntitlement(check: EntitlementCheck): Promise<boolean>;
 }
 
+export class EntitlementProviderUnavailableError extends Error {
+  constructor() {
+    super("The authoritative entitlement provider is not configured.");
+    this.name = "EntitlementProviderUnavailableError";
+  }
+}
+
+class UnconfiguredEntitlementProvider implements EntitlementProvider {
+  async hasEntitlement(_check: EntitlementCheck): Promise<boolean> {
+    throw new EntitlementProviderUnavailableError();
+  }
+}
+
 export class FakeEntitlementProvider implements EntitlementProvider {
   readonly #entitledOrganizations: ReadonlySet<string>;
 
@@ -38,11 +51,8 @@ export function setEntitlementProviderForTesting(
 export function createEntitlementProvider(
   environment: Record<string, string | undefined> = process.env,
 ): EntitlementProvider {
-  const configuredIds =
-    environment.NODE_ENV === "test"
-      ? environment.APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS
-      : environment.APP_BUILDER_ENTITLED_ORGANIZATION_IDS;
-  const organizationIds = (configuredIds ?? "")
+  if (environment.NODE_ENV !== "test") return new UnconfiguredEntitlementProvider();
+  const organizationIds = (environment.APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS ?? "")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);

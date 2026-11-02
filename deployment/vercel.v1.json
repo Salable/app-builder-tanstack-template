@@ -86,13 +86,6 @@
       "secret": true,
       "source": "generated",
       "phase": "runtime"
-    },
-    {
-      "name": "APP_BUILDER_ENTITLED_ORGANIZATION_IDS",
-      "required": false,
-      "secret": false,
-      "source": "user",
-      "phase": "runtime"
     }
   ],
   "routes": {

@@ -268,12 +268,12 @@ describe("generated application public API", () => {
     });
   });
 
-  it("returns the documented 200 through production entitlement configuration", async () => {
+  it("returns the documented 200 through an authoritative test entitlement", async () => {
     installOwnerBoundary();
     setEntitlementProviderForTesting(
       createEntitlementProvider({
-        NODE_ENV: "production",
-        APP_BUILDER_ENTITLED_ORGANIZATION_IDS: organizationId,
+        NODE_ENV: "test",
+        APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS: organizationId,
       }),
     );
 
@@ -285,6 +285,30 @@ describe("generated application public API", () => {
       projectId,
       status: "available",
     });
+  });
+
+  it("fails access closed with a safe 503 when production has no authoritative provider", async () => {
+    installOwnerBoundary();
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    setEntitlementProviderForTesting(
+      createEntitlementProvider({
+        NODE_ENV: "production",
+        APP_BUILDER_ENTITLED_ORGANIZATION_IDS: organizationId,
+        APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS: organizationId,
+      }),
+    );
+    const response = await protectedFeatureRequest();
+    expect(response.status).toBe(503);
+    expect(response.headers.get("content-type")).toContain("application/problem+json");
+    const problem = ProblemDetailSchema.parse(await response.json());
+    expect(problem).toMatchObject({
+      status: 503,
+      code: "ENTITLEMENT_PROVIDER_UNAVAILABLE",
+      detail: "Access could not be verified. Please retry later.",
+    });
+    expect(JSON.stringify(problem)).not.toContain(organizationId);
+    expect(JSON.stringify(problem)).not.toContain("configured");
+    expect(JSON.stringify(log.mock.calls)).not.toContain(organizationId);
   });
 
   it.each([
