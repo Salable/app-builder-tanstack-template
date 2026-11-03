@@ -15,7 +15,8 @@ Server API, identity, organization, entitlement, feature-flag, PostgreSQL and
 deployment support remain implementation infrastructure. They do not determine
 the product's views, features or billing model.
 
-Run `npm ci` and `npm run check` for the complete local suite, or `npm run dev`
+Use Node 26.13+ within Node 26 and the committed lockfile. Run `npm ci` and
+`npm run check` for the complete local suite, or `npm run dev`
 for local development. See the [development guide](docs/development-guide.md)
 for architecture, checks, authentication, migrations and deployment.
 

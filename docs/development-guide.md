@@ -253,6 +253,11 @@ repository and project from the maintained public template; Neon injects
 `DATABASE_URL`, and the App Builder Vercel integration supplies generated runtime
 configuration. Agent workers receive no managed database credentials.
 
+Use Node 26.13+ within Node 26 for local work and builds. The Nitro Vercel
+configuration explicitly selects `nodejs26.x`; the pinned adapter's automatic
+runtime selection predates Node 26. `check:deployment:built` verifies the emitted
+server function's runtime against the deployment contract.
+
 `npm run deploy:vercel` runs the maintained stage-aware deployment plan.
 Development and explicit Preview builds first run `npm run migrate` against their
 provider-owned Neon branch, then build and verify the Build Output API v3 package.

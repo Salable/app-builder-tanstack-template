@@ -6,7 +6,12 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [tanstackStart(), nitro(), tailwindcss(), viteReact()],
+  plugins: [
+    tanstackStart(),
+    nitro({ vercel: { functions: { runtime: "nodejs26.x" } } }),
+    tailwindcss(),
+    viteReact(),
+  ],
   resolve: {
     alias: {
       "pg-native": fileURLToPath(
