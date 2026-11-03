@@ -1,5 +1,6 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import type { Context } from "hono";
+import { routePath } from "hono/route";
 import openApiDocument from "../../openapi/openapi.json" with { type: "json" };
 import {
   ApiVersionHeaderSchema,
@@ -200,6 +201,7 @@ publicApi.openapi(createProjectRoute, async (context) => {
         detail: "A project with that name already exists.",
         status: 409,
         code: "PROJECT_NAME_CONFLICT",
+        error,
       });
     }
     if (error instanceof ProjectOrganizationAccessError) {
@@ -207,6 +209,7 @@ publicApi.openapi(createProjectRoute, async (context) => {
         detail: "The user is not a member of the requested organization.",
         status: 403,
         code: "FORBIDDEN",
+        error,
       });
     }
     throw error;
@@ -343,6 +346,7 @@ publicApi.onError((error, context) => {
       detail: "Access could not be verified. Please retry later.",
       status: 503,
       code: "ENTITLEMENT_PROVIDER_UNAVAILABLE",
+      error,
     });
   }
   if (error instanceof IdentityConfigurationError) {
@@ -351,6 +355,7 @@ publicApi.onError((error, context) => {
         "The application's sign-in configuration is incomplete. Contact the application owner with this reference.",
       status: 503,
       code: "IDENTITY_CONFIGURATION_MISSING",
+      error,
     });
   }
   if (error instanceof IdentityProviderUnavailableError) {
@@ -358,12 +363,14 @@ publicApi.onError((error, context) => {
       detail: "The sign-in service is temporarily unavailable. Please retry.",
       status: 503,
       code: "IDENTITY_PROVIDER_UNAVAILABLE",
+      error,
     });
   }
   return problem(context, {
     detail: "The server could not complete the request.",
     status: 500,
     code: "INTERNAL",
+    error,
   });
 });
 
@@ -401,7 +408,8 @@ export function getOpenApiDocument() {
 
 function normalizeCorrelationId(value: string | undefined): string | undefined {
   const normalized = value?.trim();
-  if (!normalized || normalized.length > 128) return undefined;
+  if (!normalized || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(normalized))
+    return undefined;
   return normalized;
 }
 
@@ -411,6 +419,7 @@ function problem<Status extends 400 | 401 | 403 | 404 | 409 | 500 | 503>(
     detail: string;
     status: Status;
     code: string;
+    error?: unknown;
   },
 ) {
   const body = createProblemDetail({
@@ -427,6 +436,9 @@ function problem<Status extends 400 | 401 | 403 | 404 | 409 | 500 | 503>(
   const response = context.json(body, details.status, {
     "Content-Type": "application/problem+json",
   });
-  reportProblem(body);
+  reportProblem(body, details.error, {
+    method: context.req.method,
+    path: routePath(context) ?? "/api/v1/*",
+  });
   return response;
 }

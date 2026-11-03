@@ -65,6 +65,26 @@ defects even when absent from the diff. Concrete out-of-scope
 findings become non-blocking Backlog requests; do not turn them into active-ticket
 repairs or search the whole project for supplementary work.
 
+## Error diagnostics
+
+Use the shared `src/runtime/error-logger.ts` logger for every owned failure path.
+Preserve safe causes when wrapping errors; adapters attach dependency, operation,
+category and upstream HTTP status with `DiagnosticError`. The final request
+boundary logs once with the same correlation ID returned to the client. A catch
+that returns unavailable or pending state must log there, even for HTTP 200.
+Unexpected browser, startup and background failures use the same logger; browser
+console output is not server-collected telemetry. Keep expected validation/access
+rejections distinct from outages. Never log raw messages, full stacks, payloads,
+headers, credentials, cookies, customer data or URLs with query strings. Use
+static operation names and route templates. Logging failure cannot change the
+response, billing outcome or retry policy. Follow [error logging](docs/error-logging.md).
+
+Foundation work preserves the supplied handlers; feature work wires its own
+failure paths and adds actual application regression tests for response/state,
+correlated diagnostics, redaction and a failed logger. Run them in the existing
+complete local suite and GitHub pipeline. This is a delivery requirement, not a
+recurring audit or a requirement for hosted checks or a new telemetry service.
+
 ## Monetisation
 
 For approved billing work, read the pinned Salable skills and

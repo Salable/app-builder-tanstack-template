@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from "pg";
+import { DiagnosticError, reportError } from "../runtime/error-logger";
 
 export interface DatabaseSession {
   query<Row extends QueryResultRow = QueryResultRow>(
@@ -25,8 +26,22 @@ export class PostgresDatabase implements Database {
       idleTimeoutMillis: 10_000,
       max: 5,
     });
-    this.#pool.on("error", () => {
-      console.error("An idle PostgreSQL connection failed.");
+    this.#pool.on("error", (cause) => {
+      reportError(
+        new DiagnosticError(
+          {
+            category: "database",
+            dependency: "postgres",
+            operation: "database.idle_connection",
+          },
+          { cause },
+        ),
+        {
+          source: "server",
+          operation: "database.idle_connection",
+          code: "DATABASE_CONNECTION_FAILED",
+        },
+      );
     });
   }
 

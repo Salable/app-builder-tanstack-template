@@ -15,6 +15,7 @@ import {
 } from "../identity/identity-provider";
 import { setProjectRepositoryForTesting } from "../projects/repository-provider";
 import { ProjectOrganizationAccessError } from "../projects/project-repository";
+import { createNeonAuthRuntime } from "../identity/neon-auth-runtime";
 
 const projectId = "4a130ba5-ed6e-4ae5-bac8-1d73073fa94a";
 const organizationId = "596875ff-7396-46f2-8968-7d34b8871872";
@@ -334,11 +335,15 @@ describe("generated application public API", () => {
     expect(body).toMatchObject({ type: "about:blank", code, status });
     expect(response.headers.get("X-Correlation-ID")).toBe(body.correlationId);
     expect(log).toHaveBeenCalledOnce();
-    expect(JSON.parse(log.mock.calls[0]![1] as string)).toEqual({
+    expect(JSON.parse(log.mock.calls[0]![0] as string)).toMatchObject({
+      event: "application_error",
+      source: "server",
+      operation: "http.request",
       code,
       status,
       correlationId: body.correlationId,
-      instance: "/api/v1/projects",
+      path: "/api/v1/projects",
+      error: { type: failure.constructor.name },
     });
     expect(JSON.stringify([body, log.mock.calls])).not.toContain("private");
   });
@@ -361,9 +366,82 @@ describe("generated application public API", () => {
 
   it("does not report ordinary authentication rejections as server failures", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     setIdentityProviderForTesting({ authenticate: async () => null });
     expect((await createProjectRequest()).status).toBe(401);
     expect(log).not.toHaveBeenCalled();
+    expect(warning).toHaveBeenCalledOnce();
+    expect(JSON.parse(warning.mock.calls[0]![0])).toMatchObject({
+      code: "UNAUTHORIZED",
+      status: 401,
+    });
+  });
+
+  it.each([401, 429, 503])(
+    "retains the real Neon rejection status %i behind the safe public error",
+    async (status) => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () =>
+          Response.json(
+            { message: "private credential and provider body" },
+            { status },
+          ),
+        ),
+      );
+      setIdentityProviderForTesting(
+        createNeonAuthRuntime({
+          applicationOrigin: "https://app.example.test",
+          baseUrl: "https://branch.auth.neon.tech/neondb/auth",
+          cookieSecret: "cookie-secret-with-at-least-32-characters",
+        }).identity,
+      );
+      const response = await publicApi.request(
+        `/api/v1/projects/${projectId}/protected-feature?token=private`,
+        {
+          headers: {
+            "API-Version": "1",
+            cookie: "__Secure-neon-auth.session_token=private",
+            "X-Correlation-ID": "corr_provider",
+          },
+        },
+      );
+      const problem = ProblemDetailSchema.parse(await response.json());
+      expect(response.status).toBe(503);
+      expect(problem.code).toBe("IDENTITY_PROVIDER_UNAVAILABLE");
+      expect(log).toHaveBeenCalledOnce();
+      const record = JSON.parse(log.mock.calls[0]![0]);
+      expect(record).toMatchObject({
+        code: problem.code,
+        correlationId: problem.correlationId,
+        status: 503,
+        path: "/api/v1/projects/:projectId/protected-feature",
+        error: {
+          type: "IdentityProviderUnavailableError",
+          diagnostic: {
+            category: "provider",
+            dependency: "identity",
+            operation: "identity.authenticate",
+            code: "IDENTITY_REQUEST_REJECTED",
+            httpStatus: status,
+          },
+        },
+      });
+      expect(JSON.stringify(record)).not.toContain("private");
+      expect(JSON.stringify(record)).not.toContain(projectId);
+    },
+  );
+
+  it("replaces unsafe caller correlation values and keeps the returned reference in its record", async () => {
+    const log = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const response = await publicApi.request("/api/v1/health", {
+      headers: { "X-Correlation-ID": "contains private text" },
+    });
+    const problem = ProblemDetailSchema.parse(await response.json());
+    expect(problem.correlationId).toMatch(/^corr_[a-f0-9-]{36}$/);
+    expect(JSON.parse(log.mock.calls[0]![0]).correlationId).toBe(problem.correlationId);
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private");
   });
 });
 

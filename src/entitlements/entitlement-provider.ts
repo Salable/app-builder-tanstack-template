@@ -10,9 +10,18 @@ export interface EntitlementProvider {
   hasEntitlement(check: EntitlementCheck): Promise<boolean>;
 }
 
-export class EntitlementProviderUnavailableError extends Error {
-  constructor() {
-    super("The authoritative entitlement provider is not configured.");
+export class EntitlementProviderUnavailableError extends DiagnosticError {
+  constructor(options?: ErrorOptions) {
+    super(
+      {
+        category: "configuration",
+        dependency: "entitlements",
+        operation: "entitlements.check",
+        code: "ENTITLEMENTS_NOT_CONFIGURED",
+      },
+      options,
+    );
+    this.message = "The authoritative entitlement provider is not configured.";
     this.name = "EntitlementProviderUnavailableError";
   }
 }
@@ -58,3 +67,4 @@ export function createEntitlementProvider(
     .filter(Boolean);
   return new FakeEntitlementProvider(organizationIds);
 }
+import { DiagnosticError } from "../runtime/error-logger";

@@ -3,6 +3,7 @@ import {
   extractNeonAuthCookies,
   handleAuthProxyRequest,
   NEON_AUTH_SESSION_COOKIE_NAME,
+  NEON_AUTH_NETWORK_ERROR_CODES,
   parseSetCookies,
   serializeSetCookie,
 } from "@neondatabase/auth/server";
@@ -12,6 +13,16 @@ import {
   type IdentityProvider,
 } from "./identity-provider";
 import type { NeonAuthRuntimeConfig } from "./neon-auth-config";
+import { DiagnosticError } from "../runtime/error-logger";
+
+const responseFailures = new WeakMap<Response, DiagnosticError>();
+
+/** The protocol response stays unchanged; its owner logs the safe SDK failure once. */
+export function getNeonAuthResponseFailure(
+  response: Response,
+): DiagnosticError | undefined {
+  return responseFailures.get(response);
+}
 
 export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
   const identity: IdentityProvider = {
@@ -39,15 +50,27 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
       });
       const result = await auth
         .getSession({ query: { disableCookieCache: "true" } })
-        .catch(() => {
-          throw new IdentityProviderUnavailableError();
+        .catch((cause: unknown) => {
+          throw new IdentityProviderUnavailableError(
+            { cause },
+            undefined,
+            "IDENTITY_TRANSPORT_FAILED",
+          );
         });
       if (result.error) {
-        throw new IdentityProviderUnavailableError();
+        throw new IdentityProviderUnavailableError(
+          undefined,
+          result.error.status,
+          "IDENTITY_REQUEST_REJECTED",
+        );
       }
       if (result.data === null) return null;
       if (!result.data?.session || !result.data.user) {
-        throw new IdentityProviderUnavailableError();
+        throw new IdentityProviderUnavailableError(
+          undefined,
+          undefined,
+          "IDENTITY_RESPONSE_INVALID",
+        );
       }
       const identity = AuthenticatedIdentitySchema.safeParse({
         email: result.data.user.email,
@@ -56,7 +79,11 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
         userId: result.data.user.id,
       });
       if (!identity.success) {
-        throw new IdentityProviderUnavailableError();
+        throw new IdentityProviderUnavailableError(
+          { cause: identity.error },
+          undefined,
+          "IDENTITY_RESPONSE_INVALID",
+        );
       }
       return identity.data;
     },
@@ -86,11 +113,39 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
       headers,
       ...(request.body === null ? {} : { body: await request.text() }),
     });
+    let failure: DiagnosticError | undefined;
+    const capture = (_message: string, metadata?: unknown) => {
+      // SDK metadata also contains private URLs/details. Select only documented
+      // status and network-code fields, never message text or response bodies.
+      const fields =
+        metadata !== null && typeof metadata === "object"
+          ? (metadata as Record<string, unknown>)
+          : {};
+      if (typeof fields.status === "number" && fields.status < 400) return;
+      const networkCode =
+        typeof fields.code === "string" &&
+        NEON_AUTH_NETWORK_ERROR_CODES.some((code) => code === fields.code)
+          ? fields.code
+          : undefined;
+      failure = new DiagnosticError({
+        category: "provider",
+        dependency: "neon-auth",
+        operation: "identity.proxy",
+        code:
+          networkCode ??
+          (typeof fields.status === "number"
+            ? "IDENTITY_REQUEST_REJECTED"
+            : "IDENTITY_PROXY_FAILED"),
+        ...(typeof fields.status === "number" ? { httpStatus: fields.status } : {}),
+      });
+    };
     const response = await handleAuthProxyRequest({
       ...config,
       request: proxied,
       path,
+      log: { error: capture, warn: capture, info: capture, debug: () => undefined },
     });
+    if (failure) responseFailures.set(response, failure);
     const cookies = response.headers.getSetCookie();
     response.headers.delete("set-cookie");
     for (const header of cookies) {

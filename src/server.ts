@@ -4,6 +4,8 @@ import { getAuthenticationRuntime } from "./identity/auth-runtime";
 import { IdentityConfigurationError } from "./identity/identity-provider";
 import { canonicalApplicationRedirect } from "./runtime/application-origin";
 import { createProblemDetail, reportProblem } from "./api/problem-detail";
+import { reportError } from "./runtime/error-logger";
+import { getNeonAuthResponseFailure } from "./identity/neon-auth-runtime";
 
 export default createServerEntry({
   async fetch(request) {
@@ -13,7 +15,26 @@ export default createServerEntry({
     }
     if (pathname === "/api/auth" || pathname.startsWith("/api/auth/")) {
       try {
-        return await getAuthenticationRuntime().handler(request);
+        const response = await getAuthenticationRuntime().handler(request);
+        const failure = getNeonAuthResponseFailure(response);
+        if (response.status >= 400 || failure) {
+          const correlationId = `corr_${crypto.randomUUID()}`;
+          try {
+            response.headers.set("X-Correlation-ID", correlationId);
+          } catch {
+            // A read-only response remains valid even if diagnostics cannot annotate it.
+          }
+          reportError(failure, {
+            source: "server",
+            operation: "identity.request",
+            code: "AUTH_REQUEST_REJECTED",
+            status: response.status,
+            method: request.method,
+            path: "/api/auth/*",
+            correlationId,
+          });
+        }
+        return response;
       } catch (error) {
         if (error instanceof IdentityConfigurationError) {
           const problem = createProblemDetail({
@@ -31,12 +52,32 @@ export default createServerEntry({
             },
             status: 503,
           });
-          reportProblem(problem);
+          reportProblem(problem, error, {
+            method: request.method,
+            path: "/api/auth/*",
+          });
           return response;
         }
+        reportError(error, {
+          source: "server",
+          operation: "identity.request",
+          code: "AUTH_REQUEST_FAILED",
+          method: request.method,
+          path: "/api/auth/*",
+        });
         throw error;
       }
     }
-    return canonicalApplicationRedirect(request) ?? handler.fetch(request);
+    try {
+      return canonicalApplicationRedirect(request) ?? (await handler.fetch(request));
+    } catch (error) {
+      reportError(error, {
+        source: "server",
+        operation: "http.render",
+        code: "SERVER_RENDER_FAILED",
+        method: request.method,
+      });
+      throw error;
+    }
   },
 });

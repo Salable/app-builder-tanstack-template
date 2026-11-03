@@ -291,3 +291,11 @@ configured commercial entitlement provider. Its protected example returns a safe
 503 until the product's billing implementation supplies authoritative Salable
 checks. Environment allowlists cannot grant production access. The fake provider
 and `APP_BUILDER_TEST_ENTITLED_ORGANIZATION_IDS` are local-test fixtures only.
+
+## Error logging
+
+Use the shared structured logger and preserve safe causes through adapters and
+public error wrappers. The request boundary reports correlated failures; a catch
+that returns a degraded state reports its own failure. Browser, bootstrap and
+background handlers use the same safe format. See [error logging](error-logging.md)
+for the record, ownership and required application tests.

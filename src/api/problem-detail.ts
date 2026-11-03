@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { reportError } from "../runtime/error-logger";
 
 export const ProblemDetailSchema = z
   .object({
@@ -40,19 +41,17 @@ export function createProblemDetail(
 }
 
 /** Deliberately excludes exception messages, credentials and provider response bodies. */
-export function reportProblem(problem: ProblemDetail): void {
-  if (problem.status < 500) return;
-  try {
-    console.error(
-      "Application request failed",
-      JSON.stringify({
-        code: problem.code,
-        status: problem.status,
-        correlationId: problem.correlationId,
-        instance: problem.instance,
-      }),
-    );
-  } catch {
-    // A failed diagnostic sink cannot replace the application response.
-  }
+export function reportProblem(
+  problem: ProblemDetail,
+  error?: unknown,
+  request: { method?: string; path?: string } = {},
+): void {
+  reportError(error, {
+    source: "server",
+    operation: "http.request",
+    code: problem.code,
+    status: problem.status,
+    correlationId: problem.correlationId,
+    ...request,
+  });
 }

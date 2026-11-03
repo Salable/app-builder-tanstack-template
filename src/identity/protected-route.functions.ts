@@ -34,7 +34,7 @@ export const getProtectedRouteIdentity = createServerFn({ method: "GET" }).handl
           detail: problem.detail,
           correlationId: problem.correlationId,
         };
-        reportProblem(problem);
+        reportProblem(problem, error, { method: "GET", path: "/protected" });
         return result;
       }
       throw error;

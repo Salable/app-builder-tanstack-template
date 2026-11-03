@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { authClient } from "./auth-client";
 import { announceSessionChange } from "./session-changes";
+import { reportBrowserError } from "../runtime/browser-errors";
 
 type AuthMode = "sign-in" | "sign-up";
 
@@ -39,6 +40,11 @@ export function AuthForm({
         ? await authClient.signUp.email({ email, password, name })
         : await authClient.signIn.email({ email, password });
       if (result.error) {
+        reportBrowserError(result.error, {
+          operation: "identity.sign_in",
+          code: "SIGN_IN_FAILED",
+          status: result.error.status,
+        });
         setError(
           result.error.message || "We could not complete sign-in. Please try again.",
         );
@@ -47,7 +53,11 @@ export function AuthForm({
       // Navigation belongs to the product; session establishment stays shared.
       announceSessionChange();
       onAuthenticated();
-    } catch {
+    } catch (error) {
+      reportBrowserError(error, {
+        operation: "identity.sign_in",
+        code: "SIGN_IN_FAILED",
+      });
       setError("We could not reach the identity service. Please try again.");
     } finally {
       setPending(false);
