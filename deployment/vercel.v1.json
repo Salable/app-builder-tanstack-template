@@ -95,7 +95,7 @@
     "openapi": "/api/v1/openapi.json"
   },
   "runtime": {
-    "node": "24.x",
+    "node": "26.x",
     "regions": []
   },
   "securityHeaders": [

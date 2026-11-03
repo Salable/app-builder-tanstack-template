@@ -294,4 +294,46 @@ describe("deployment environment contract", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it.each([
+    ["Node 26", JSON.stringify({ runtime: "nodejs26.x" }), null],
+    ["old runtime", JSON.stringify({ runtime: "nodejs24.x" }), '"runtime"'],
+    ["missing runtime", JSON.stringify({}), '"runtime"'],
+    ["malformed runtime", JSON.stringify({ runtime: 26 }), '"runtime"'],
+    ["malformed JSON", "{", "SyntaxError"],
+    ["missing function config", undefined, "ENOENT"],
+  ])("checks the emitted Vercel function: %s", (_name, contents, expectedError) => {
+    const directory = mkdtempSync(join(tmpdir(), "vercel-function-"));
+    const configPath = join(directory, "config.json");
+    try {
+      writeFileSync(configPath, JSON.stringify({ version: 3 }));
+      const functionDirectory = join(directory, "functions/__server.func");
+      mkdirSync(functionDirectory, { recursive: true });
+      if (contents !== undefined) {
+        writeFileSync(join(functionDirectory, ".vc-config.json"), contents);
+      }
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--import",
+          "tsx",
+          "scripts/check-deployment-manifest.ts",
+          "--built",
+          configPath,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(result.error).toBeUndefined();
+      expect(result.signal).toBeNull();
+      if (expectedError === null) {
+        expect(result.status).toBe(0);
+        expect(result.stdout).toContain("Verified Vercel deployment manifest");
+      } else {
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(expectedError);
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });

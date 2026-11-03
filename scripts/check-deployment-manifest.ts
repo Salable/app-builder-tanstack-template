@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { z } from "zod";
 
 const EnvironmentVariableSchema = z
@@ -76,7 +77,7 @@ const DeploymentManifestSchema = z
       .strict(),
     runtime: z
       .object({
-        node: z.literal("24.x"),
+        node: z.literal("26.x"),
         regions: z.array(z.string()),
       })
       .strict(),
@@ -231,6 +232,13 @@ if (process.argv.includes("--built")) {
   if (buildOutput.version !== 3) {
     throw new Error("Vercel Build Output API version must be 3.");
   }
+  const functionConfigPath = join(
+    dirname(configPath),
+    "functions/__server.func/.vc-config.json",
+  );
+  z.object({ runtime: z.literal(`nodejs${manifest.runtime.node}`) })
+    .passthrough()
+    .parse(JSON.parse(await readFile(functionConfigPath, "utf8")));
 }
 
 console.log(
