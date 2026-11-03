@@ -377,7 +377,7 @@ describe("generated application public API", () => {
     });
   });
 
-  it.each([401, 429, 503])(
+  it.each([401, 429, 502])(
     "retains the real Neon rejection status %i behind the safe public error",
     async (status) => {
       const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
