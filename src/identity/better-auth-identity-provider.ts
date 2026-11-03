@@ -30,8 +30,8 @@ export class BetterAuthIdentityProvider implements IdentityProvider {
           {
             category: "provider",
             dependency: "better-auth",
-            operation: "identity.authenticate",
-            code: "IDENTITY_REQUEST_FAILED",
+            operation: "identity.session",
+            code: "IDENTITY_OPERATION_FAILED",
           },
           { cause },
         );

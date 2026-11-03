@@ -6,6 +6,7 @@ import { canonicalApplicationRedirect } from "./runtime/application-origin";
 import { createProblemDetail, reportProblem } from "./api/problem-detail";
 import { reportError } from "./runtime/error-logger";
 import { getNeonAuthResponseFailure } from "./identity/neon-auth-runtime";
+import { getBetterAuthResponseFailure } from "./identity/better-auth-runtime";
 
 export default createServerEntry({
   async fetch(request) {
@@ -16,7 +17,9 @@ export default createServerEntry({
     if (pathname === "/api/auth" || pathname.startsWith("/api/auth/")) {
       try {
         const response = await getAuthenticationRuntime().handler(request);
-        const failure = getNeonAuthResponseFailure(response);
+        const failure =
+          getNeonAuthResponseFailure(response) ??
+          getBetterAuthResponseFailure(response);
         if (response.status >= 400 || failure) {
           const correlationId = `corr_${crypto.randomUUID()}`;
           try {

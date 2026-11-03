@@ -36,7 +36,7 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
         return null;
       // The server toolkit holds no browser client, broadcast listener, or user
       // session cache. Each call binds only this request's allowed cookies.
-      const diagnostics = captureDiagnostics("identity.authenticate");
+      const diagnostics = captureDiagnostics("identity.session");
       const auth = createAuthServer({
         ...config,
         log: diagnostics.log,
@@ -149,9 +149,9 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
   return { identity, handler };
 }
 
-function captureDiagnostics(operation: string) {
+function captureDiagnostics(operation: "identity.proxy" | "identity.session") {
   let failure: DiagnosticError | undefined;
-  const capture = (_message: string, metadata?: unknown) => {
+  const capture = (level: "warn" | "error", _message: string, metadata?: unknown) => {
     // SDK metadata also contains private URLs/details. Select only documented
     // status and network-code fields, never message text or response bodies.
     const fields =
@@ -172,13 +172,21 @@ function captureDiagnostics(operation: string) {
         networkCode ??
         (typeof fields.status === "number"
           ? "IDENTITY_REQUEST_REJECTED"
-          : "IDENTITY_PROXY_FAILED"),
+          : level === "error"
+            ? "IDENTITY_SDK_FAILED"
+            : "IDENTITY_SDK_WARNING"),
       ...(typeof fields.status === "number" ? { httpStatus: fields.status } : {}),
     });
   };
   return {
     failure: () => failure,
-    log: { error: capture, warn: capture, info: capture, debug: () => undefined },
+    log: {
+      error: (message: string, metadata?: unknown) =>
+        capture("error", message, metadata),
+      warn: (message: string, metadata?: unknown) => capture("warn", message, metadata),
+      info: (message: string, metadata?: unknown) => capture("warn", message, metadata),
+      debug: () => undefined,
+    },
   };
 }
 
@@ -187,7 +195,7 @@ function reportIdentityDiagnostic(failure: DiagnosticError | undefined): void {
   // SDK cookie refresh can fail while its authoritative identity read succeeds.
   reportError(failure, {
     source: "server",
-    operation: "identity.authenticate",
+    operation: "identity.session",
     code: "IDENTITY_RESPONSE_DEGRADED",
   });
 }
