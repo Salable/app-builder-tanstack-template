@@ -13,9 +13,9 @@ export function getAuthenticationRuntime() {
 function createAuthenticationRuntime() {
   const neon = readNeonAuthConfig(process.env);
   if (neon !== null) return createNeonAuthRuntime(neon);
-  const { auth } = getBetterAuthRuntime();
+  const { handler, getSession } = getBetterAuthRuntime();
   return {
-    identity: new BetterAuthIdentityProvider(() => auth),
-    handler: (request: Request) => auth.handler(request),
+    identity: new BetterAuthIdentityProvider(() => ({ api: { getSession } })),
+    handler,
   };
 }

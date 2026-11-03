@@ -422,7 +422,7 @@ describe("generated application public API", () => {
           diagnostic: {
             category: "provider",
             dependency: "identity",
-            operation: "identity.authenticate",
+            operation: "identity.session",
             code: "IDENTITY_REQUEST_REJECTED",
             httpStatus: status,
           },

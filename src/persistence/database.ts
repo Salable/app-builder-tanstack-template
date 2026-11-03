@@ -31,7 +31,7 @@ export class PostgresDatabase implements Database {
         new DiagnosticError(
           {
             category: "database",
-            dependency: "postgres",
+            dependency: "postgresql",
             operation: "database.idle_connection",
           },
           { cause },

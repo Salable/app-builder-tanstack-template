@@ -44,7 +44,7 @@ export class IdentityProviderUnavailableError extends DiagnosticError {
       {
         category: "provider",
         dependency: "identity",
-        operation: "identity.authenticate",
+        operation: "identity.session",
         httpStatus,
         code,
       },

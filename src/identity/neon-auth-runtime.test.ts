@@ -67,7 +67,7 @@ describe("managed Neon authentication runtime", () => {
           diagnostic: {
             category: "provider",
             dependency: "neon-auth",
-            operation: "identity.authenticate",
+            operation: "identity.session",
           },
         },
       });

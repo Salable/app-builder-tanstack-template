@@ -34,7 +34,7 @@ describe("database background diagnostics", () => {
           code: "DATABASE_CONNECTION_FAILED",
           source: "server",
           error: {
-            diagnostic: { category: "database", dependency: "postgres" },
+            diagnostic: { category: "database", dependency: "postgresql" },
             cause: { type: "Error", code: "08006" },
           },
         });

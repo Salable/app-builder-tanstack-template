@@ -301,7 +301,7 @@ describe("server entry diagnostics", () => {
             category: "provider",
             dependency: "neon-auth",
             operation: "identity.proxy",
-            code: "IDENTITY_PROXY_FAILED",
+            code: "IDENTITY_SDK_FAILED",
           },
         },
       });
