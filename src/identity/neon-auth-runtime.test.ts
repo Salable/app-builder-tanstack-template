@@ -24,8 +24,57 @@ const session = (id: string) => ({
     updatedAt: "2026-01-01T00:00:00.000Z",
   },
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 describe("managed Neon authentication runtime", () => {
+  it.each(["valid identity", "no session", "failed logger"])(
+    "reports an SDK cookie-refresh failure while preserving %s",
+    async (outcome) => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => {
+        if (outcome === "failed logger") throw new Error("sink unavailable");
+      });
+      const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json(outcome === "no session" ? null : session("alice"), {
+            headers: {
+              "set-cookie":
+                "__Secure-neon-auth.session_token=private-token; Path=/; Secure; HttpOnly",
+            },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response("private malformed session", {
+            headers: { "content-type": "application/json" },
+          }),
+        );
+      vi.stubGlobal("fetch", fetch);
+      const identity = await createNeonAuthRuntime(config).identity.authenticate(
+        new Headers({ cookie: "__Secure-neon-auth.session_token=private-token" }),
+      );
+      if (outcome === "no session") expect(identity).toBeNull();
+      else
+        expect(identity).toMatchObject({ userId: "alice", sessionId: "session-alice" });
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(log).toHaveBeenCalledOnce();
+      expect(warning).not.toHaveBeenCalled();
+      expect(JSON.parse(log.mock.calls[0]![0])).toMatchObject({
+        code: "IDENTITY_RESPONSE_DEGRADED",
+        error: {
+          diagnostic: {
+            category: "provider",
+            dependency: "neon-auth",
+            operation: "identity.authenticate",
+          },
+        },
+      });
+      expect(JSON.stringify(log.mock.calls)).not.toContain("private");
+      expect(log.mock.calls[0]).toHaveLength(1);
+    },
+  );
   it("isolates concurrent server identities, reads current sessions, and never creates broadcast subscribers", async () => {
     const channel = getGlobalBroadcastChannel();
     const subscribe = vi.spyOn(channel, "subscribe");

@@ -233,6 +233,83 @@ describe("server entry diagnostics", () => {
     expect(log).not.toHaveBeenCalled();
   });
 
+  it.each(["malformed JSON", "invalid session dates", "logger failure"])(
+    "records cookie-mint %s after successful sign-in without changing the response",
+    async (scenario) => {
+      configureNeon();
+      const log = vi.spyOn(console, "error").mockImplementation(() => {
+        if (scenario === "logger failure")
+          throw new Error("diagnostic sink unavailable");
+      });
+      const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const fetch = vi.fn(async (url: string) => {
+        if (url.endsWith("/get-session")) {
+          if (scenario === "invalid session dates")
+            return Response.json({
+              session: {
+                id: "private-session",
+                createdAt: "private-invalid-date",
+                updatedAt: "2026-01-01T00:00:00Z",
+                expiresAt: "2099-01-01T00:00:00Z",
+              },
+              user: {
+                id: "private-user",
+                createdAt: "2026-01-01T00:00:00Z",
+                updatedAt: "2026-01-01T00:00:00Z",
+              },
+            });
+          return new Response("private malformed upstream session", {
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return Response.json(
+          { ok: true },
+          {
+            headers: {
+              "set-cookie":
+                "__Secure-neon-auth.session_token=private-token; Path=/; Secure; HttpOnly",
+            },
+          },
+        );
+      });
+      vi.stubGlobal("fetch", fetch);
+      const { default: entry } = await import("./server");
+      const response = await entry.fetch(
+        new Request("http://127.0.0.1:3000/api/auth/sign-in/email", {
+          method: "POST",
+          headers: {
+            origin: "http://127.0.0.1:3000",
+            "content-type": "application/json",
+          },
+          body: '{"email":"private@example.test","password":"private-password"}',
+        }),
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ ok: true });
+      expect(response.headers.get("set-cookie")).toContain(
+        "session_token=private-token",
+      );
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(log).toHaveBeenCalledOnce();
+      expect(warning).not.toHaveBeenCalled();
+      expect(JSON.parse(log.mock.calls[0]![0])).toMatchObject({
+        code: "AUTH_RESPONSE_DEGRADED",
+        status: 200,
+        correlationId: response.headers.get("X-Correlation-ID"),
+        error: {
+          diagnostic: {
+            category: "provider",
+            dependency: "neon-auth",
+            operation: "identity.proxy",
+            code: "IDENTITY_PROXY_FAILED",
+          },
+        },
+      });
+      expect(JSON.stringify(log.mock.calls)).not.toContain("private");
+      expect(log.mock.calls[0]).toHaveLength(1);
+    },
+  );
+
   it("leaves API error serialization and reporting with the API boundary", async () => {
     const log = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const { default: entry } = await import("./server");

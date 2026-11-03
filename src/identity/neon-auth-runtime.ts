@@ -13,7 +13,7 @@ import {
   type IdentityProvider,
 } from "./identity-provider";
 import type { NeonAuthRuntimeConfig } from "./neon-auth-config";
-import { DiagnosticError } from "../runtime/error-logger";
+import { DiagnosticError, reportError } from "../runtime/error-logger";
 
 const responseFailures = new WeakMap<Response, DiagnosticError>();
 
@@ -36,8 +36,10 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
         return null;
       // The server toolkit holds no browser client, broadcast listener, or user
       // session cache. Each call binds only this request's allowed cookies.
+      const diagnostics = captureDiagnostics("identity.authenticate");
       const auth = createAuthServer({
         ...config,
+        log: diagnostics.log,
         context: () => ({
           getCookies: () => cookies,
           getHeader: (name) => headers.get(name),
@@ -59,12 +61,15 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
         });
       if (result.error) {
         throw new IdentityProviderUnavailableError(
-          undefined,
+          { cause: diagnostics.failure() },
           result.error.status,
           "IDENTITY_REQUEST_REJECTED",
         );
       }
-      if (result.data === null) return null;
+      if (result.data === null) {
+        reportIdentityDiagnostic(diagnostics.failure());
+        return null;
+      }
       if (!result.data?.session || !result.data.user) {
         throw new IdentityProviderUnavailableError(
           undefined,
@@ -85,6 +90,7 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
           "IDENTITY_RESPONSE_INVALID",
         );
       }
+      reportIdentityDiagnostic(diagnostics.failure());
       return identity.data;
     },
   };
@@ -113,38 +119,14 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
       headers,
       ...(request.body === null ? {} : { body: await request.text() }),
     });
-    let failure: DiagnosticError | undefined;
-    const capture = (_message: string, metadata?: unknown) => {
-      // SDK metadata also contains private URLs/details. Select only documented
-      // status and network-code fields, never message text or response bodies.
-      const fields =
-        metadata !== null && typeof metadata === "object"
-          ? (metadata as Record<string, unknown>)
-          : {};
-      if (typeof fields.status === "number" && fields.status < 400) return;
-      const networkCode =
-        typeof fields.code === "string" &&
-        NEON_AUTH_NETWORK_ERROR_CODES.some((code) => code === fields.code)
-          ? fields.code
-          : undefined;
-      failure = new DiagnosticError({
-        category: "provider",
-        dependency: "neon-auth",
-        operation: "identity.proxy",
-        code:
-          networkCode ??
-          (typeof fields.status === "number"
-            ? "IDENTITY_REQUEST_REJECTED"
-            : "IDENTITY_PROXY_FAILED"),
-        ...(typeof fields.status === "number" ? { httpStatus: fields.status } : {}),
-      });
-    };
+    const diagnostics = captureDiagnostics("identity.proxy");
     const response = await handleAuthProxyRequest({
       ...config,
       request: proxied,
       path,
-      log: { error: capture, warn: capture, info: capture, debug: () => undefined },
+      log: diagnostics.log,
     });
+    const failure = diagnostics.failure();
     if (failure) responseFailures.set(response, failure);
     const cookies = response.headers.getSetCookie();
     response.headers.delete("set-cookie");
@@ -165,4 +147,47 @@ export function createNeonAuthRuntime(config: NeonAuthRuntimeConfig) {
     return response;
   }
   return { identity, handler };
+}
+
+function captureDiagnostics(operation: string) {
+  let failure: DiagnosticError | undefined;
+  const capture = (_message: string, metadata?: unknown) => {
+    // SDK metadata also contains private URLs/details. Select only documented
+    // status and network-code fields, never message text or response bodies.
+    const fields =
+      metadata !== null && typeof metadata === "object"
+        ? (metadata as Record<string, unknown>)
+        : {};
+    if (typeof fields.status === "number" && fields.status < 400) return;
+    const networkCode =
+      typeof fields.code === "string" &&
+      NEON_AUTH_NETWORK_ERROR_CODES.some((code) => code === fields.code)
+        ? fields.code
+        : undefined;
+    failure = new DiagnosticError({
+      category: "provider",
+      dependency: "neon-auth",
+      operation,
+      code:
+        networkCode ??
+        (typeof fields.status === "number"
+          ? "IDENTITY_REQUEST_REJECTED"
+          : "IDENTITY_PROXY_FAILED"),
+      ...(typeof fields.status === "number" ? { httpStatus: fields.status } : {}),
+    });
+  };
+  return {
+    failure: () => failure,
+    log: { error: capture, warn: capture, info: capture, debug: () => undefined },
+  };
+}
+
+function reportIdentityDiagnostic(failure: DiagnosticError | undefined): void {
+  if (!failure) return;
+  // SDK cookie refresh can fail while its authoritative identity read succeeds.
+  reportError(failure, {
+    source: "server",
+    operation: "identity.authenticate",
+    code: "IDENTITY_RESPONSE_DEGRADED",
+  });
 }

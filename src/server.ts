@@ -27,7 +27,10 @@ export default createServerEntry({
           reportError(failure, {
             source: "server",
             operation: "identity.request",
-            code: "AUTH_REQUEST_REJECTED",
+            code:
+              response.status >= 400
+                ? "AUTH_REQUEST_REJECTED"
+                : "AUTH_RESPONSE_DEGRADED",
             status: response.status,
             method: request.method,
             path: "/api/auth/*",
