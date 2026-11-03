@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { isAPIError } from "better-auth/api";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Pool } from "pg";
 import { readBetterAuthConfig } from "./better-auth-config";
@@ -25,6 +26,7 @@ export function createBetterAuthRuntime(
     operation: string;
     active: boolean;
     failure?: DiagnosticError;
+    routerFailure?: { error: unknown };
   };
   const diagnostics = new AsyncLocalStorage<DiagnosticScope>();
   const capture = (level: "warn" | "error", ...values: unknown[]) => {
@@ -84,8 +86,19 @@ export function createBetterAuthRuntime(
         if (level === "warn" || level === "error") capture(level, message, ...values);
       },
     },
-    // Better Auth's default API-error hook can bypass its configured logger.
-    onAPIError: { onError: (error) => capture("error", error) },
+    onAPIError: {
+      onError(error) {
+        capture("error", error);
+        // Leave SDK protocol error responses and redirects intact.
+        if (isAPIError(error)) return;
+        const scope = diagnostics.getStore();
+        if (scope?.active && scope.operation === "identity.proxy")
+          scope.routerFailure = { error };
+        // Returning lets Better Call print the raw exception. Only the matching
+        // handler scope below restores its existing empty HTTP500 response.
+        throw error;
+      },
+    },
     advanced: {
       cookiePrefix: "generated-app",
       defaultCookieAttributes: {
@@ -124,6 +137,14 @@ export function createBetterAuthRuntime(
           if (scope.failure) responseFailures.set(response, scope.failure);
           return response;
         } catch (cause) {
+          if (scope.routerFailure && Object.is(scope.routerFailure.error, cause)) {
+            const response = new Response(null, {
+              status: 500,
+              statusText: "Internal Server Error",
+            });
+            if (scope.failure) responseFailures.set(response, scope.failure);
+            return response;
+          }
           if (scope.failure)
             throw new DiagnosticError(
               {

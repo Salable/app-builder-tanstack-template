@@ -92,6 +92,54 @@ function failSessionDelete(failure: Promise<never> | Error) {
 
 describe("Better Auth safe SDK diagnostics", () => {
   it.each([false, true])(
+    "keeps a real SDK sign-in database failure as one safe correlated empty500 response (sink fails: %s)",
+    async (sinkFails) => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => {
+        if (sinkFails) throw new Error("sink unavailable");
+      });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      // Fail the external PostgreSQL connection, retaining the SDK's real
+      // findUserByEmail, dispatch, error hook and Better Call router path.
+      const connect = vi
+        .spyOn(Pool.prototype, "connect")
+        .mockRejectedValue(databaseFailure());
+      const { entry } = await application();
+      const [response, healthy] = await Promise.all([
+        entry.fetch(
+          new Request(`${origin}/api/auth/sign-in/email`, {
+            method: "POST",
+            headers: { origin, "content-type": "application/json" },
+            body: JSON.stringify({
+              email: "private@example.test",
+              password: "private-password",
+            }),
+          }),
+        ),
+        entry.fetch(new Request(`${origin}/api/auth/get-session`)),
+      ]);
+      expect(connect).toHaveBeenCalledOnce();
+      expect(response.status).toBe(500);
+      expect(response.statusText).toBe("Internal Server Error");
+      expect(await response.text()).toBe("");
+      expect(response.headers.getSetCookie()).toEqual([]);
+      expect(healthy.status).toBe(200);
+      expect(await healthy.json()).toBeNull();
+      expect(log).toHaveBeenCalledOnce();
+      expect(warn).not.toHaveBeenCalled();
+      expect(log.mock.calls[0]).toHaveLength(1);
+      expect(JSON.parse(log.mock.calls[0]![0])).toMatchObject({
+        code: "AUTH_REQUEST_REJECTED",
+        status: 500,
+        correlationId: response.headers.get("X-Correlation-ID"),
+        error: {
+          diagnostic: { dependency: "better-auth", operation: "identity.proxy" },
+          cause: { code: "08006" },
+        },
+      });
+      expect(JSON.stringify(log.mock.calls)).not.toContain("private");
+    },
+  );
+  it.each([false, true])(
     "logs a swallowed sign-out database error once while preserving success and cookies (sink fails: %s)",
     async (sinkFails) => {
       const log = vi.spyOn(console, "error").mockImplementation(() => {
