@@ -133,6 +133,9 @@ describe("server entry diagnostics", () => {
         },
       },
     });
+    expect(JSON.parse(log.mock.calls[0]![0]).error.diagnostic).not.toHaveProperty(
+      "httpStatus",
+    );
     expect(JSON.stringify(log.mock.calls)).not.toContain("private");
   });
 
@@ -233,7 +236,12 @@ describe("server entry diagnostics", () => {
     expect(log).not.toHaveBeenCalled();
   });
 
-  it.each(["malformed JSON", "invalid session dates", "logger failure"])(
+  it.each([
+    "malformed JSON",
+    "invalid session dates",
+    "misleading transport message",
+    "logger failure",
+  ])(
     "records cookie-mint %s after successful sign-in without changing the response",
     async (scenario) => {
       configureNeon();
@@ -244,6 +252,8 @@ describe("server entry diagnostics", () => {
       const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
       const fetch = vi.fn(async (url: string) => {
         if (url.endsWith("/get-session")) {
+          if (scenario === "misleading transport message")
+            throw new Error("Failed to fetch session data: 502 private-provider-text");
           if (scenario === "invalid session dates")
             return Response.json({
               session: {
@@ -305,6 +315,9 @@ describe("server entry diagnostics", () => {
           },
         },
       });
+      expect(JSON.parse(log.mock.calls[0]![0]).error.diagnostic).not.toHaveProperty(
+        "httpStatus",
+      );
       expect(JSON.stringify(log.mock.calls)).not.toContain("private");
       expect(log.mock.calls[0]).toHaveLength(1);
     },
