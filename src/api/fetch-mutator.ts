@@ -1,12 +1,17 @@
 import type { ProblemDetail } from "./generated/models";
 import { createProblemDetail, ProblemDetailSchema } from "./problem-detail";
+import { reportBrowserError } from "../runtime/browser-errors";
 
 export class ApiError<TProblem = ProblemDetail> extends Error {
   constructor(
     public readonly status: number,
     public readonly problem: TProblem,
+    options?: ErrorOptions,
   ) {
-    super(ProblemDetailSchema.safeParse(problem).data?.detail ?? "API request failed");
+    super(
+      ProblemDetailSchema.safeParse(problem).data?.detail ?? "API request failed",
+      options,
+    );
     this.name = "ApiError";
   }
 }
@@ -14,6 +19,22 @@ export class ApiError<TProblem = ProblemDetail> extends Error {
 export type ErrorType<TError> = ApiError<TError>;
 
 export async function apiFetch<T>(url: string, options: RequestInit): Promise<T> {
+  try {
+    return await performFetch<T>(url, options);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      reportBrowserError(error, {
+        operation: "api.request",
+        code: error.problem.code,
+        correlationId: error.problem.correlationId,
+        status: error.status,
+      });
+    }
+    throw error;
+  }
+}
+
+async function performFetch<T>(url: string, options: RequestInit): Promise<T> {
   const headers = new Headers(options.headers);
   const version = /(?:^|\/)api\/v([1-9]\d*)(?:\/|$)/.exec(url)?.[1];
   if (version !== undefined && !headers.has("API-Version")) {
@@ -32,7 +53,7 @@ export async function apiFetch<T>(url: string, options: RequestInit): Promise<T>
 async function send(url: string, options: RequestInit): Promise<Response> {
   try {
     return await fetch(url, options);
-  } catch {
+  } catch (cause) {
     throw new ApiError(
       503,
       createProblemDetail({
@@ -42,6 +63,7 @@ async function send(url: string, options: RequestInit): Promise<Response> {
         detail: "The API could not be reached.",
         code: "TRANSPORT_UNAVAILABLE",
       }),
+      { cause },
     );
   }
 }
@@ -51,12 +73,12 @@ async function readBody(response: Response): Promise<unknown> {
   try {
     const text = await response.text();
     return text === "" ? undefined : (JSON.parse(text) as unknown);
-  } catch {
-    throw responseFailure(response.status);
+  } catch (cause) {
+    throw responseFailure(response.status, cause);
   }
 }
 
-function responseFailure(httpStatus: number): ApiError {
+function responseFailure(httpStatus: number, cause?: unknown): ApiError {
   const status = httpStatus >= 400 && httpStatus <= 599 ? httpStatus : 502;
   return new ApiError(
     status,
@@ -67,5 +89,6 @@ function responseFailure(httpStatus: number): ApiError {
       detail: "The API returned an invalid response.",
       code: "INVALID_RESPONSE",
     }),
+    { cause },
   );
 }

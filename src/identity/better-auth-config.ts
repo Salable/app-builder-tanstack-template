@@ -20,7 +20,7 @@ export function readBetterAuthConfig(environment: RuntimeEnvironment) {
     baseUrl = resolveApplicationOrigin(environment);
   } catch (error) {
     if (error instanceof ApplicationOriginConfigurationError) {
-      throw new IdentityConfigurationError(error.message);
+      throw new IdentityConfigurationError(error.message, { cause: error });
     }
     throw error;
   }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { subscribeToSessionChanges } from "./session-changes";
+import { reportBrowserError } from "../runtime/browser-errors";
 
 /** Discard the previous account's UI before reloading authoritative server routes. */
 export function SessionBoundary({ children }: { children: ReactNode }) {
@@ -25,7 +26,11 @@ export function SessionBoundary({ children }: { children: ReactNode }) {
     try {
       await refreshRoutes;
       if (revision.current === current) setState("ready");
-    } catch {
+    } catch (error) {
+      reportBrowserError(error, {
+        operation: "session.refresh",
+        code: "SESSION_REFRESH_FAILED",
+      });
       if (revision.current === current) setState("failed");
     }
   }, [queries, router]);

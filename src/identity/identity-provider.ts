@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DiagnosticError } from "../runtime/error-logger";
 
 export const AuthenticatedIdentitySchema = z
   .object({
@@ -15,16 +16,41 @@ export interface IdentityProvider {
   authenticate(headers: Headers): Promise<AuthenticatedIdentity | null>;
 }
 
-export class IdentityConfigurationError extends Error {
-  constructor(message = "Generated application identity is not configured.") {
-    super(message);
+export class IdentityConfigurationError extends DiagnosticError {
+  constructor(
+    message = "Generated application identity is not configured.",
+    options?: ErrorOptions,
+  ) {
+    super(
+      {
+        category: "configuration",
+        operation: "identity.configure",
+        code: "IDENTITY_CONFIGURATION_MISSING",
+      },
+      options,
+    );
+    this.message = message;
     this.name = "IdentityConfigurationError";
   }
 }
 
-export class IdentityProviderUnavailableError extends Error {
-  constructor() {
-    super("The identity provider could not complete the request.");
+export class IdentityProviderUnavailableError extends DiagnosticError {
+  constructor(
+    options?: ErrorOptions,
+    httpStatus?: number,
+    code = "IDENTITY_PROVIDER_UNAVAILABLE",
+  ) {
+    super(
+      {
+        category: "provider",
+        dependency: "identity",
+        operation: "identity.authenticate",
+        httpStatus,
+        code,
+      },
+      options,
+    );
+    this.message = "The identity provider could not complete the request.";
     this.name = "IdentityProviderUnavailableError";
   }
 }

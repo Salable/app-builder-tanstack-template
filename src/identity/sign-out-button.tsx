@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { authClient } from "./auth-client";
 import { announceSessionChange } from "./session-changes";
+import { reportBrowserError } from "../runtime/browser-errors";
 
 export function SignOutButton({
   onSignedOut,
@@ -18,12 +19,21 @@ export function SignOutButton({
     try {
       const result = await authClient.signOut();
       if (result.error) {
+        reportBrowserError(result.error, {
+          operation: "identity.sign_out",
+          code: "SIGN_OUT_FAILED",
+          status: result.error.status,
+        });
         setError("Sign-out failed. Please try again.");
         return;
       }
       announceSessionChange();
       await onSignedOut?.();
-    } catch {
+    } catch (error) {
+      reportBrowserError(error, {
+        operation: "identity.sign_out",
+        code: "SIGN_OUT_FAILED",
+      });
       setError("Sign-out failed. Please try again.");
     } finally {
       setPending(false);

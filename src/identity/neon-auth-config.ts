@@ -45,8 +45,8 @@ function parseAuthUrl(value: string, environment: Environment): string {
   let url: URL;
   try {
     url = new URL(value);
-  } catch {
-    throw new IdentityConfigurationError("A Neon Auth URL is invalid.");
+  } catch (cause) {
+    throw new IdentityConfigurationError("A Neon Auth URL is invalid.", { cause });
   }
   const localTest =
     environment.NODE_ENV === "test" &&
@@ -71,7 +71,7 @@ function applicationOrigin(environment: Environment): string {
     return resolveApplicationOrigin(environment);
   } catch (error) {
     if (error instanceof ApplicationOriginConfigurationError)
-      throw new IdentityConfigurationError(error.message);
+      throw new IdentityConfigurationError(error.message, { cause: error });
     throw error;
   }
 }
