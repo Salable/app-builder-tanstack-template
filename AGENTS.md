@@ -1,162 +1,92 @@
 # Agent guidance
 
-The landing, sign-in, sign-up and signed-in views are neutral starter skeletons.
-Product tickets replace all starter copy, branding and presentation with the
-accepted product design; retain the tested authentication behavior underneath.
-Do not preserve the explainer as a finished product or invent features from it.
+The ticket defines the work. Deliver its smallest coherent outcome, preserve
+unrelated changes and remove code/tests made obsolete by the change. Report
+concrete out-of-scope findings in `supplementaryFindings` with a stable kebab-case
+key, evidence, requested outcome and `duplicateOfTaskId` when already tracked
+(otherwise null). The owner prioritises Backlog; do not expand this ticket.
 
-The ticket defines the work. Implement its smallest coherent outcome, remove code
-and tests made obsolete by that change, and preserve unrelated changes.
-Supporting project material is optional: inspect it when needed
-to understand or complete the ticket. Do not perform recurring setup, audits or
-unrelated improvements. Authors report concrete supplementary findings for automatic
-Backlog creation in `supplementaryFindings`, using a stable kebab-case finding key,
-concrete evidence and a requested outcome. Use `duplicateOfTaskId` when an existing
-ticket already owns that outcome, otherwise null. The
-project owner controls their priority.
+Landing, sign-in, sign-up and signed-in views are neutral skeletons. Their owning
+product tickets replace starter copy, branding and presentation with the accepted
+product design while retaining tested authentication. Do not invent features
+from starter examples or treat the skeleton as the finished product.
 
-Authentication is an existing tested capability. Customise its page layout and
-navigation; reuse `AuthForm`, `SignOutButton`, `SessionBoundary`, the server identity boundary and
-the local auth fixtures. Add tests for the product's changes, not another auth
-implementation or test harness. See [auth customisation](docs/development-guide.md#auth-customisation).
+## Design
 
-Keep functions readable as a recipe: sanitise and validate inputs, process the
-request, finalise the result, transform if needed, then persist and return.
-Finish processing before storage where practical; use atomic writes when partial
-updates would leave broken state. Give each function a clear responsibility.
+Keep functions readable as recipes: validate, process, finalise, persist, respond.
+Prefer guard clauses and atomic writes when partial state would be invalid;
+avoid speculative retries, fallbacks and abstractions. Business rules,
+authorization and workflow progression belong on the server. The UI renders
+server state and permitted actions, submits intent and owns transient display
+state. Keep the selected framework and one current contract.
 
-Business rules and workflow progression belong on the server. The UI presents
-server state and permitted actions, collects intent and owns transient display
-state. Prefer one current contract and deterministic outcomes. Recovery should
-safely resume known work; avoid speculative retry and fallback layers.
-
-Use the shared error handling and API contract: `about:blank`, a stable `code`,
-safe detail and a correlation ID. Distinguish missing configuration from provider
-outages. Report failures without secrets or provider bodies; defer nonessential
-logging and tracking until after the response where the runtime supports it.
+Use the shared API problem contract (`about:blank`, stable code, safe detail and
+correlation ID) and existing server identity boundary. Customize auth layout and
+navigation; reuse `AuthForm`, `SignOutButton`, `SessionBoundary` and local auth
+fixtures. Follow the [development guide](docs/development-guide.md) for the
+existing server/API boundaries; do not introduce another auth implementation.
 
 ## Verification and completion
 
 Test every changed exit through observable behavior, including rejection and
-failure. Use real internal dependencies and disposable local storage; mock LLMs,
-GitHub, Vercel and Neon at their external boundaries. Include integration coverage
-where practical and a browser happy path plus a representative visible error.
-Do not add tests that only assert their own fixtures or repeat implementation.
+failure. Use real internal dependencies and disposable local storage; replace
+LLMs, GitHub, Vercel and Neon at their external boundaries. Include functional/
+integration coverage and browser happy paths plus a representative visible error.
+Fixture self-checks and duplicated implementations do not prove application behavior.
 
-Authors run the complete `npm run check` on the final worktree, sequentially and without
-running its constituents concurrently. Use focused checks to diagnose failures.
-Do not repeat an unchanged failed command without a new hypothesis. Authors return
-`COMPLETED` for delivered work with green local checks. If work remains incomplete,
-preserve coherent changes and return `REVIEW_REQUIRED` with the failure and
-remaining work. Review follows automatically. A justified response on a retained
-PR can require no source edit; do not manufacture one.
+Authors run the complete `npm run check` on the final worktree, sequentially
+without concurrent constituents. Diagnose failures before repeating commands.
+Return `COMPLETED` only for delivered work and green checks; otherwise preserve
+coherent work and return `REVIEW_REQUIRED` with the failure and remaining work.
+A justified no-change response on a retained PR needs no manufactured edit.
 
-Coding agents never perform hosted checks. Deployments, hosted browser tests,
-provider smoke checks and remote CI retries belong to trusted automation or human
-QA. Missing hosted evidence is not a coding failure. This overrides conflicting
-ticket or historical instructions. Required Salable Test Mode catalog setup is
-implementation within a billing ticket, as described in the reference below.
+Reviewers keep source and Git state unchanged and inspect completed canonical
+GitHub Actions evidence in `reviews/input.json`. They do not install dependencies,
+run tests/builds, reproduce failures or retry CI. Missing required files are
+in-scope defects; unrelated findings remain Backlog work.
 
-Reviewers assess the ticket and introduced regressions independently, keeping
-tracked source and Git state unchanged. Read the supplied completed GitHub Actions
-evidence in `reviews/input.json`; do not install dependencies, run tests/builds,
-reproduce failures or retry CI. Required missing files are in-scope implementation
-defects even when absent from the diff. Concrete out-of-scope
-findings become non-blocking Backlog requests; do not turn them into active-ticket
-repairs or search the whole project for supplementary work.
+Coding agents never perform hosted QA, deployments or remote CI retries; trusted
+automation or human QA owns those checks. Missing hosted evidence is not a coding
+failure, even if an older ticket says otherwise. Required approved Salable Test
+Mode catalog setup/readback is implementation, not hosted QA. Dependency changes
+must serve the ticket, update the lockfile and explain the choice. Do not run
+`npm audit`, unsolicited package upgrades or advisory remediation.
 
-## Error diagnostics
+## Task-specific guidance
 
-Use the shared `src/runtime/error-logger.ts` logger for every owned failure path.
-Preserve safe causes when wrapping errors; adapters attach dependency, operation,
-category and upstream HTTP status with `DiagnosticError`. Every caught upstream
-HTTP failure must retain the actual response status, dependency, operation and
-allowlisted provider error code when known through wrapping to the final log;
-never substitute the application's response status or discard this evidence in a
-generic configuration/unavailable error. The final request boundary logs once
-with the same correlation ID returned to the client, including catches that
-return unavailable or pending HTTP 200 state. When no HTTP response was received,
-omit upstream status and record a safe, specific timeout, transport or missing
-configuration reason code; do not invent a status. Missing diagnostic fields are
-not evidence that no provider request occurred.
-Unexpected browser, startup and background failures use the same logger; browser
-console output is not server-collected telemetry. Keep expected validation/access
-rejections distinct from outages. Never log raw messages, full stacks, payloads,
-headers, credentials, cookies, customer data or URLs with query strings. Use
-static operation names and route templates. Treat the complete exception message
-as private, including multiline text that resembles stack frames. Configure SDK
-logging/error hooks so raw vendor logging and swallowed failures cannot bypass the
-shared logger; isolate concurrent requests. Logging failure cannot change the
-response, billing outcome or retry policy. Follow [error logging](docs/error-logging.md).
+Applicable skills are required; optional supporting context does not waive them.
 
-Foundation work preserves the supplied handlers; feature work wires its own
-failure paths and adds actual application regression tests for response/state,
-correlated diagnostics, redaction and a failed logger. For upstream failures,
-assert the actual upstream status/code survives normalization and public wrappers
-alongside a different public status or degraded HTTP 200; cover a no-response
-failure with a specific reason and no invented status. Run them in the existing
-complete local suite and GitHub pipeline. This is a delivery requirement, not a
-recurring audit or a requirement for hosted checks or a new telemetry service.
+- Changed errors, provider adapters or logging: use
+  [app-error-handling](.agents/skills/app-error-handling/SKILL.md) and its local
+  reference. Preserve the shared safe logger; diagnostics cannot change outcomes.
+- Approved billing work: use the installed pinned `salable-design` and
+  `salable-develop` skills plus [monetisation](docs/monetisation.md). Use
+  `salable-init` for an actual readiness question. The accepted agreement owns
+  expected outcomes; authentication, billing authority and entitlement access
+  remain separate. Use this project's confirmed catalog and real Test Mode IDs,
+  never foreign resources or placeholders. Deliver required application tests and
+  `.salable` artifacts with the supplied `check:commercial` contract.
+- Auth, local database, environment or product-entry changes: read the relevant
+  part of [integrations](docs/agent-integrations.md) and the
+  [development guide](docs/development-guide.md).
 
-## Monetisation
+## Tools and environment
 
-For approved billing work, read the pinned Salable skills and
-[monetisation playbook](docs/monetisation.md). Keep authentication, billing-management
-permission and entitlement access separate. The backend owns mutations, settlement
-and permitted actions; subscription labels never substitute for entitlement checks.
-Shared Salable keys do not authorize reusing another project's catalog. Use only
-this project's established product/plan/price bindings, preserve their provenance,
-and create distinct resources for a new independent product. Matching names or
-prices do not establish ownership. Test that checkout rejects foreign plan IDs
-and sends this project's intended bindings; see the playbook for readback and
-repair rules. Never modify another app's resources to repair this one.
-Salable's grantee entitlement-check 404 means an empty entitlement set, not an
-outage or proof of no subscription. Keep content locked and billing reads usable;
-follow the playbook's endpoint-specific normalization and regression cases.
-An eligible hosted-purchase click defaults to immediate current-tab navigation to
-the validated server-returned checkout URL, unless the accepted experience differs.
-Do not wait for paid-state readback. Checkout readiness, awaiting payment and
-post-payment settlement differ; follow the playbook's accessible fallback,
-explicit resume, duplicate prevention and no-redirect-loop rules. Prove actual
-browser navigation through the real application and adapter, not URL presence.
-Commit real API/UI regression tests with the feature and run them in the existing
-complete suite and GitHub pipeline. Provider fixtures replace external calls only.
-Populate `.salable/requirements.json` from the approved agreement and validate the
-catalog and acceptance bindings with `npm run check:commercial`; do not use
-`UNCONFIGURED`, `NONE` or missing files to skip required billing work. The validator
-does not prove that the application tests passed. Hosted checks remain separate.
+The worker supplies Node/npm, Git, rg, Bash, curl, jq, Python 3, build tools and
+Chromium. Use the lockfile; no OS/browser bootstrap is needed. Honor
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` with `--no-sandbox` inside the worker.
+`APP_BUILDER_TEST_DATABASE_URL`, when supplied, is a disposable local PostgreSQL
+fixture; workers do not need Docker access.
 
-## Tools and references
+`.app-builder/context/manifest.json` lists optional project references. The mounted
+operation's `body.environment` defines Preview/Production names, ownership and
+applied revisions. Never invent configuration or copy secrets or mounted documents
+into source. Agents receive no deployment, hosted database or release credentials;
+GitHub publication is platform-owned. Shared account access grants no authority
+to adopt or modify another project's catalog; no Live Mode work is authorized.
 
-The worker supplies Node/npm, Git, rg, Bash, curl, jq, Python 3, C/C++ build tools
-and Chromium. Use the committed lockfile; no OS or browser bootstrap is needed.
-For Playwright, use `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when set, with
-`--no-sandbox` inside the isolated worker. Keep default writable tool caches.
-`APP_BUILDER_TEST_DATABASE_URL`, when provided, is a disposable local PostgreSQL
-fixture managed by the host; the worker does not need Docker access. For database
-work, follow [database setup and tests](docs/agent-integrations.md#database-setup-and-tests).
-
-Project references are mounted read-only under `.app-builder/context`; its
-`manifest.json` lists available documents. Installed Salable skills
-(`salable-design`, `salable-develop`, `salable-init`) are discoverable through Codex.
-Use them only when relevant. GitHub publication is platform-owned. Agents do not
-receive Vercel, Neon, Preview/Production database or release credentials. Never
-copy secrets or mounted documents into source or result summaries.
-
-For configuration work, the mounted operation document's `body.environment` is
-the names-only Preview/Production contract. Follow
-[runtime environments](docs/agent-integrations.md#runtime-environments); do not
-invent variables, credentials or domains.
-
-See [README](README.md) for the accepted product outline,
-[development guide](docs/development-guide.md) for scripts and architecture, and
-[task-specific integrations](docs/agent-integrations.md) for auth, application
-URLs, billing, migrations and product entry work. Dependency changes require the
-active feature, a lockfile update and a justification; no unsolicited advisory
-remediation or audit gate.
-
-GitHub Actions owns independent verification: `.github/workflows/ci.yml` runs the
-`app-builder/ci` job on the exact PR head, with `npm run check` in the
-`Run complete suite` step. Use local fixtures and a read-only GitHub token, no
-application secrets. Restore this workflow in the foundation ticket if the clone
-omitted it.
+`.github/workflows/ci.yml` independently runs `npm run check` in the `app-builder/ci`
+job's `Run complete suite` step on the exact PR head, using local fixtures and a
+read-only GitHub token, no application secrets. Restore this canonical workflow
+in the foundation ticket if the clone omitted it. See [README](README.md) for the
+accepted product scope; a local fixture pass is not hosted customer verification.
